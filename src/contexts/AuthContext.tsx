@@ -42,10 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
       setProfile(data);
+      return data;
     } catch (error) {
       console.error('Error fetching profile:', error);
+      return null;
     }
   };
 
@@ -76,21 +81,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
+      (event: AuthChangeEvent, session: Session | null) => {
+        if (!mounted) return;
 
-          if (session?.user) {
-            await fetchProfile(session.user.id);
-          } else {
-            setProfile(null);
-          }
+        (async () => {
+          try {
+            setSession(session);
+            setUser(session?.user ?? null);
 
-          if (event === 'SIGNED_OUT') {
-            setProfile(null);
+            if (session?.user) {
+              await fetchProfile(session.user.id);
+            } else {
+              setProfile(null);
+            }
+
+            if (event === 'SIGNED_OUT') {
+              setProfile(null);
+            }
+
+            if (event === 'SIGNED_IN' && session?.user) {
+              await fetchProfile(session.user.id);
+            }
+          } catch (error) {
+            console.error('Error in auth state change:', error);
           }
-        }
+        })();
       }
     );
 
@@ -110,16 +125,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signUpError) throw signUpError;
 
       if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-            full_name: fullName || null,
-          });
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              email: data.user.email!,
+              full_name: fullName || null,
+            });
 
-        if (profileError) throw profileError;
-        await fetchProfile(data.user.id);
+          if (profileError) {
+            console.error('Profile creation error:', profileError);
+          }
+
+          await fetchProfile(data.user.id);
+        } catch (error) {
+          console.error('Error creating profile:', error);
+        }
       }
 
       return { error: null };
@@ -147,6 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      setProfile(null);
+      setUser(null);
+      setSession(null);
     } catch (error) {
       console.error('Error signing out:', error);
     }

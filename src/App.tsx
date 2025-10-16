@@ -1,5 +1,6 @@
 import { Suspense, useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import DemoPage from './components/DemoPage';
 import AuthPage from './components/AuthPage';
@@ -14,7 +15,9 @@ function AppContent() {
     const path = window.location.pathname;
     if (path === '/demo') {
       setCurrentPage('demo');
-    } else if (path === '/app' || user) {
+    } else if (path === '/app') {
+      setCurrentPage('app');
+    } else if (user) {
       setCurrentPage('app');
     } else {
       setCurrentPage('landing');
@@ -26,7 +29,9 @@ function AppContent() {
       const path = window.location.pathname;
       if (path === '/demo') {
         setCurrentPage('demo');
-      } else if (path === '/app' || user) {
+      } else if (path === '/app') {
+        setCurrentPage('app');
+      } else if (user) {
         setCurrentPage('app');
       } else {
         setCurrentPage('landing');
@@ -69,20 +74,22 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Suspense
-        fallback={
-          <div className="min-h-screen bg-[#0f1729] flex items-center justify-center">
-            <div className="text-center">
-              <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <div className="text-white text-xl font-semibold">Loading...</div>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Suspense
+          fallback={
+            <div className="min-h-screen bg-[#0f1729] flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="text-white text-xl font-semibold">Loading...</div>
+              </div>
             </div>
-          </div>
-        }
-      >
-        <AppContent />
-      </Suspense>
-    </AuthProvider>
+          }
+        >
+          <AppContent />
+        </Suspense>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
