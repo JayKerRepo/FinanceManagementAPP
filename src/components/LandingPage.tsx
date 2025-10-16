@@ -31,8 +31,8 @@ export default function LandingPage() {
             <a href="#features" className="text-gray-400 hover:text-white transition">Features</a>
             <a href="/demo" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/demo'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="text-gray-400 hover:text-white transition">Demo</a>
             <a href="#pricing" className="text-gray-400 hover:text-white transition">Pricing</a>
-            <button className="text-gray-400 hover:text-white transition">Login</button>
-            <button className="gradient-blue px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition">
+            <button onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="text-gray-400 hover:text-white transition">Login</button>
+            <button onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="bg-gradient-to-r from-[#10B981] to-[#059669] px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition">
               Sign Up
             </button>
           </div>
@@ -49,44 +49,38 @@ export default function LandingPage() {
               </div>
 
               <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">
-                Manage Multiple Businesses with{' '}
-                <span className="text-gradient">AI Voice Assistant</span>
+                Smart Expense.{' '}
+                <span className="bg-gradient-to-r from-[#6B8AFF] to-[#8B7CFF] bg-clip-text text-transparent">Unified Business Hub.</span>{' '}
+                Zero Chaos.
               </h1>
 
               <p className="text-xl text-gray-400 mb-8 leading-relaxed">
-                Track expenses, scan receipts, log mileage, and get real-time insights across all your businesses.
-                Just speak, and let AI do the heavy lifting.
+                Speak it. Snap it. Sorted, powered by AI
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => setShowLeadModal(true)}
-                  className="gradient-blue px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition card-glow flex items-center justify-center gap-2"
+                  onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                  className="bg-gradient-to-r from-[#10B981] to-[#059669] px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition shadow-lg shadow-green-500/30 flex items-center justify-center gap-2"
                 >
                   Start Your Smart Finance Journey
                   <ArrowRight className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => { window.history.pushState({}, '', '/demo'); window.dispatchEvent(new PopStateEvent('popstate')); }}
-                  className="bg-[#252a41] px-8 py-4 rounded-xl font-semibold text-lg hover:bg-[#2b3152] transition flex items-center justify-center gap-2"
+                  className="bg-[#1a2332] border border-white/10 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-[#252a41] transition flex items-center justify-center gap-2"
                 >
                   <Play className="w-5 h-5" />
-                  View Live Demo
+                  Watch Demo
                 </button>
               </div>
 
-              <div className="flex items-center gap-8 mt-10">
-                <div>
-                  <div className="text-3xl font-bold text-[#5b6ef6]">10K+</div>
-                  <div className="text-sm text-gray-400">Active Users</div>
+              <div className="flex items-center gap-4 mt-10">
+                <div className="flex items-center text-yellow-400">
+                  <span className="text-2xl">⭐⭐⭐⭐⭐</span>
                 </div>
-                <div>
-                  <div className="text-3xl font-bold text-[#5b6ef6]">50K+</div>
-                  <div className="text-sm text-gray-400">Receipts Processed</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-[#5b6ef6]">99.9%</div>
-                  <div className="text-sm text-gray-400">Accuracy</div>
+                <div className="text-sm text-gray-400">
+                  4.9/5 by 2,000+ business owners — join the next big thing in business finance.
                 </div>
               </div>
             </div>
@@ -148,58 +142,58 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-[#252a41] p-8 rounded-2xl border border-white/5 hover:border-[#5b6ef6]/30 transition">
-              <div className="w-14 h-14 gradient-blue rounded-xl flex items-center justify-center mb-6">
+            <div className="bg-[#1a2332] p-8 rounded-2xl border border-white/5 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/10 transition-all group">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#6B7CFF] to-[#5B6EF6] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Camera className="w-7 h-7" />
+              </div>
+              <h3 className="text-2xl font-bold mb-3">Instant Smart Capture</h3>
+              <p className="text-gray-400 leading-relaxed">
+                Snap receipts, speak expenses, or sync accounts. Our AI instantly captures and categorizes everything.
+              </p>
+            </div>
+
+            <div className="bg-[#1a2332] p-8 rounded-2xl border border-white/5 hover:border-teal-500/30 hover:shadow-lg hover:shadow-teal-500/10 transition-all group">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#14B8A6] to-[#0D9488] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Mic className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">AI Voice Assistant</h3>
+              <h3 className="text-2xl font-bold mb-3">Voice-Powered Commands</h3>
               <p className="text-gray-400 leading-relaxed">
-                Simply speak to add expenses, ask questions, and get instant insights. No typing required.
+                Just speak your expenses while driving, walking, or working. Hands-free finance management that fits your lifestyle.
               </p>
             </div>
 
-            <div className="bg-[#252a41] p-8 rounded-2xl border border-white/5 hover:border-[#5b6ef6]/30 transition">
-              <div className="w-14 h-14 gradient-purple rounded-xl flex items-center justify-center mb-6">
+            <div className="bg-[#1a2332] p-8 rounded-2xl border border-white/5 hover:border-pink-500/30 hover:shadow-lg hover:shadow-pink-500/10 transition-all group">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#EC4899] to-[#DB2777] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Building2 className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Multi-Business Support</h3>
+              <h3 className="text-2xl font-bold mb-3">Unified Business Hub</h3>
               <p className="text-gray-400 leading-relaxed">
-                Manage unlimited businesses under one account with separate tracking and reporting.
+                Manage multiple businesses from one dashboard. Switch between ventures seamlessly and track everything in one place.
               </p>
             </div>
 
-            <div className="bg-[#252a41] p-8 rounded-2xl border border-white/5 hover:border-[#5b6ef6]/30 transition">
-              <div className="w-14 h-14 gradient-blue rounded-xl flex items-center justify-center mb-6">
-                <Receipt className="w-7 h-7" />
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Smart Receipt Scanning</h3>
-              <p className="text-gray-400 leading-relaxed">
-                Snap a photo and let AI extract all data automatically. Supports multiple languages.
-              </p>
-            </div>
-
-            <div className="bg-[#252a41] p-8 rounded-2xl border border-white/5 hover:border-[#5b6ef6]/30 transition">
-              <div className="w-14 h-14 gradient-purple rounded-xl flex items-center justify-center mb-6">
+            <div className="bg-[#1a2332] p-8 rounded-2xl border border-white/5 hover:border-orange-500/30 hover:shadow-lg hover:shadow-orange-500/10 transition-all group">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <TrendingUp className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Real-Time Analytics</h3>
+              <h3 className="text-2xl font-bold mb-3">Real-time AI Insights</h3>
               <p className="text-gray-400 leading-relaxed">
                 Get instant P&L reports, spending trends, and tax insights across all your businesses.
               </p>
             </div>
 
-            <div className="bg-[#252a41] p-8 rounded-2xl border border-white/5 hover:border-[#5b6ef6]/30 transition">
-              <div className="w-14 h-14 gradient-blue rounded-xl flex items-center justify-center mb-6">
-                <Globe className="w-7 h-7" />
+            <div className="bg-[#1a2332] p-8 rounded-2xl border border-white/5 hover:border-red-500/30 hover:shadow-lg hover:shadow-red-500/10 transition-all group">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#EF4444] to-[#DC2626] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                <Zap className="w-7 h-7" />
               </div>
-              <h3 className="text-2xl font-bold mb-3">Multi-Currency Support</h3>
+              <h3 className="text-2xl font-bold mb-3">Fast, Frictionless Setup</h3>
               <p className="text-gray-400 leading-relaxed">
-                Track expenses in any currency with automatic conversion and real-time exchange rates.
+                Get started in minutes. No complex integrations. Just sign up, set up, and start managing your finances.
               </p>
             </div>
 
-            <div className="bg-[#252a41] p-8 rounded-2xl border border-white/5 hover:border-[#5b6ef6]/30 transition">
-              <div className="w-14 h-14 gradient-purple rounded-xl flex items-center justify-center mb-6">
+            <div className="bg-[#1a2332] p-8 rounded-2xl border border-white/5 hover:border-purple-500/30 hover:shadow-lg hover:shadow-purple-500/10 transition-all group">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#8B5CF6] to-[#7C3AED] rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Shield className="w-7 h-7" />
               </div>
               <h3 className="text-2xl font-bold mb-3">Bank-Level Security</h3>
@@ -413,18 +407,18 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => setShowLeadModal(true)}
-              className="gradient-blue px-10 py-5 rounded-xl font-semibold text-xl hover:opacity-90 transition card-glow inline-flex items-center justify-center gap-2"
+              onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              className="bg-gradient-to-r from-[#10B981] to-[#059669] px-10 py-5 rounded-xl font-semibold text-xl hover:opacity-90 transition shadow-lg shadow-green-500/30 inline-flex items-center justify-center gap-2"
             >
               Start Your Smart Finance Journey
               <ArrowRight className="w-6 h-6" />
             </button>
             <button
               onClick={() => { window.history.pushState({}, '', '/demo'); window.dispatchEvent(new PopStateEvent('popstate')); }}
-              className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-10 py-5 rounded-xl font-semibold text-xl hover:scale-105 transition shadow-2xl shadow-purple-500/50 inline-flex items-center justify-center gap-2 group"
+              className="bg-[#1a2332] border border-white/10 px-10 py-5 rounded-xl font-semibold text-xl hover:bg-[#252a41] transition inline-flex items-center justify-center gap-2 group"
             >
               <Play className="w-6 h-6 group-hover:scale-110 transition" />
-              Try Live Demo
+              Watch Demo
             </button>
           </div>
         </div>
