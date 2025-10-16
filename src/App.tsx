@@ -1,4 +1,5 @@
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { BusinessProvider } from './contexts/BusinessContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -7,41 +8,11 @@ import DemoPage from './components/DemoPage';
 import AuthPage from './components/AuthPage';
 import OnboardingFlow from './components/OnboardingFlow';
 import DashboardMock from './components/DashboardMock';
+import VerifyEmailNotice from './components/VerifyEmailNotice';
 
 function AppContent() {
   const { user, profile, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'landing' | 'demo' | 'app'>('landing');
-
-  useEffect(() => {
-    const path = window.location.pathname;
-    if (path === '/demo') {
-      setCurrentPage('demo');
-    } else if (path === '/app') {
-      setCurrentPage('app');
-    } else if (user) {
-      setCurrentPage('app');
-    } else {
-      setCurrentPage('landing');
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const handleNavigation = () => {
-      const path = window.location.pathname;
-      if (path === '/demo') {
-        setCurrentPage('demo');
-      } else if (path === '/app') {
-        setCurrentPage('app');
-      } else if (user) {
-        setCurrentPage('app');
-      } else {
-        setCurrentPage('landing');
-      }
-    };
-
-    window.addEventListener('popstate', handleNavigation);
-    return () => window.removeEventListener('popstate', handleNavigation);
-  }, [user]);
+  const isVerified = Boolean((user as unknown as { email_confirmed_at?: string })?.email_confirmed_at);
 
   if (loading) {
     return (
@@ -54,23 +25,28 @@ function AppContent() {
     );
   }
 
-  if (currentPage === 'demo') {
-    return <DemoPage />;
-  }
-
-  if (currentPage === 'app') {
-    if (!user) {
-      return <AuthPage />;
-    }
-
-    if (profile && !profile.onboarding_completed) {
-      return <OnboardingFlow onComplete={() => window.location.reload()} />;
-    }
-
-    return <DashboardMock />;
-  }
-
-  return <LandingPage />;
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="/auth" element={!user ? <AuthPage /> : <Navigate to="/app" replace />} />
+      <Route
+        path="/app"
+        element={
+          !user ? (
+            <AuthPage />
+          ) : !isVerified ? (
+            <VerifyEmailNotice />
+          ) : profile && !profile.onboarding_completed ? (
+            <OnboardingFlow onComplete={() => window.location.reload()} />
+          ) : (
+            <DashboardMock />
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }
 
 function App() {

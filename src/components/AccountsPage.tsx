@@ -19,6 +19,7 @@ interface Props {
 
 export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: Props = {}) {
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [reportPeriod, setReportPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
 
   const accounts: Account[] = [
     {
@@ -53,6 +54,67 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
     },
   ];
 
+  // Mock transactions for income/expense summary per business
+  const transactions: { id: string; business: string; amount: number; }[] = [
+    { id: 't1', business: 'Business A', amount: -240.12 },
+    { id: 't2', business: 'Business A', amount: -1200.00 },
+    { id: 't3', business: 'Business A', amount: 3200.00 },
+    { id: 't4', business: 'Business B', amount: -450.25 },
+    { id: 't5', business: 'Business B', amount: 1800.00 },
+  ];
+
+  const businessNames = Array.from(new Set(accounts.map(a => a.business)));
+
+  const calcTotals = (biz: 'all' | string) => {
+    const tx = transactions.filter(t => biz === 'all' ? true : t.business === biz);
+    const expense = tx.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const income = tx.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    return { expense, income };
+  };
+
+  // Simple mocked breakdown for the report pie chart
+  const getBreakdown = (period: typeof reportPeriod, biz: 'all' | string) => {
+    const base = biz === 'all' ? 1 : 0.6; // arbitrary variation
+    switch (period) {
+      case 'daily':
+        return [
+          { label: 'Office', value: 120 * base, color: '#5b6ef6' },
+          { label: 'Meals', value: 80 * base, color: '#f59e0b' },
+          { label: 'Travel', value: 60 * base, color: '#10b981' },
+          { label: 'Other', value: 30 * base, color: '#6b7280' },
+        ];
+      case 'weekly':
+        return [
+          { label: 'Office', value: 540 * base, color: '#5b6ef6' },
+          { label: 'Meals', value: 310 * base, color: '#f59e0b' },
+          { label: 'Travel', value: 220 * base, color: '#10b981' },
+          { label: 'Other', value: 140 * base, color: '#6b7280' },
+        ];
+      case 'monthly':
+        return [
+          { label: 'Office', value: 1547 * base, color: '#5b6ef6' },
+          { label: 'Marketing', value: 1230 * base, color: '#8b5cf6' },
+          { label: 'Travel & Meals', value: 890 * base, color: '#f59e0b' },
+          { label: 'Other', value: 460 * base, color: '#6b7280' },
+        ];
+      case 'quarterly':
+        return [
+          { label: 'Office', value: 4800 * base, color: '#5b6ef6' },
+          { label: 'Marketing', value: 3900 * base, color: '#8b5cf6' },
+          { label: 'Travel & Meals', value: 2700 * base, color: '#f59e0b' },
+          { label: 'Other', value: 1500 * base, color: '#6b7280' },
+        ];
+      case 'yearly':
+      default:
+        return [
+          { label: 'Office', value: 19000 * base, color: '#5b6ef6' },
+          { label: 'Marketing', value: 15500 * base, color: '#8b5cf6' },
+          { label: 'Travel & Meals', value: 11200 * base, color: '#f59e0b' },
+          { label: 'Other', value: 6400 * base, color: '#6b7280' },
+        ];
+    }
+  };
+
   const totalBalance = accounts
     .filter(acc => selectedFilter === 'all' || acc.business === selectedFilter)
     .reduce((sum, acc) => sum + acc.balance, 0);
@@ -69,15 +131,32 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
         </button>
       </div>
 
-      {/* Total Balance Card */}
+      {/* Summary Cards for selected business (default All Businesses) */}
       <div className="px-6 mb-6">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#5b6ef6] via-[#6b7bff] to-[#8b5cf6] p-6">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-          <div className="relative">
-            <div className="text-5xl font-bold mb-2">${totalBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div className="text-sm text-blue-100/80">+${monthChange.toLocaleString()} this month</div>
-          </div>
-        </div>
+        {(() => {
+          const biz = selectedFilter === 'all' ? 'all' : selectedFilter;
+          const { expense, income } = calcTotals(biz);
+          const total = income - expense;
+          return (
+            <div className="flex flex-wrap gap-3">
+              <div className="inline-flex flex-col bg-[#1e2337] border border-white/5 rounded-xl px-4 py-3 min-w-[180px]">
+                <div className="text-xs uppercase text-gray-400 mb-1">{biz === 'all' ? 'All Businesses' : biz}</div>
+                <div className="text-xs text-gray-400">Expense</div>
+                <div className="text-xl font-bold text-red-400">${expense.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div className="inline-flex flex-col bg-[#1e2337] border border-white/5 rounded-xl px-4 py-3 min-w-[180px]">
+                <div className="text-xs uppercase text-gray-400 mb-1">&nbsp;</div>
+                <div className="text-xs text-gray-400">Income</div>
+                <div className="text-xl font-bold text-green-400">${income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              </div>
+              <div className="inline-flex flex-col bg-[#1e2337] border border-white/5 rounded-xl px-4 py-3 min-w-[180px]">
+                <div className="text-xs uppercase text-gray-400 mb-1">&nbsp;</div>
+                <div className="text-xs text-gray-400">Total</div>
+                <div className="text-xl font-bold">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Filter Tabs */}
@@ -145,6 +224,83 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
               </div>
             </button>
           ))}
+      </div>
+
+      {/* Reports Section with period selector and pie chart */}
+      <div className="px-6 mt-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Reports</h2>
+          <div className="flex gap-2">
+            {(['daily','weekly','monthly','quarterly','yearly'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setReportPeriod(p)}
+                className={`px-3 py-1.5 rounded-lg text-sm transition ${reportPeriod === p ? 'bg-[#2d3352] text-white' : 'bg-[#1e2337] text-gray-300 hover:bg-[#252a45]'}`}
+              >
+                {p[0].toUpperCase() + p.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="bg-[#1e2337] border border-white/5 rounded-2xl p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div className="flex items-center justify-center">
+              {(() => {
+                const data = getBreakdown(reportPeriod, selectedFilter === 'all' ? 'all' : selectedFilter);
+                const total = data.reduce((s, d) => s + d.value, 0) || 1;
+                const radius = 80;
+                const circumference = 2 * Math.PI * radius;
+                let cumulative = 0;
+                return (
+                  <div className="relative w-56 h-56">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                      <circle cx="100" cy="100" r={radius} fill="none" stroke="#2d3248" strokeWidth="32" />
+                      {data.map((item, idx) => {
+                        const pct = item.value / total;
+                        const len = pct * circumference;
+                        const dashArray = `${len} ${circumference}`;
+                        const dashOffset = -cumulative * circumference;
+                        cumulative += pct;
+                        return (
+                          <circle
+                            key={item.label}
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="none"
+                            stroke={item.color}
+                            strokeWidth="32"
+                            strokeDasharray={dashArray}
+                            strokeDashoffset={dashOffset}
+                            className="transition-all duration-300"
+                          />
+                        );
+                      })}
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <p className="text-2xl font-bold">{selectedFilter === 'all' ? 'All' : selectedFilter}</p>
+                      <p className="text-xs text-gray-400">{reportPeriod[0].toUpperCase()+reportPeriod.slice(1)} breakdown</p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold mb-3 text-gray-300">Categories</h3>
+              <div className="space-y-2">
+                {getBreakdown(reportPeriod, selectedFilter === 'all' ? 'all' : selectedFilter).map((item) => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-sm text-gray-300">{item.label}</span>
+                    </div>
+                    <span className="text-sm font-bold">${item.value.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Add Account Button */}

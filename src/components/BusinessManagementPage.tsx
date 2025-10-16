@@ -75,38 +75,32 @@ export default function BusinessManagementPage() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('businesses').insert({
-          user_id: user.id,
-          name: formData.name,
-          business_type: formData.business_type,
-          tax_id: formData.tax_id || null,
-          address: formData.address ? { street: formData.address } : {},
-          is_default: businesses.length === 0,
-        });
+        const { error } = await supabase
+          .from('businesses')
+          .insert({
+            name: formData.name,
+            business_type: formData.business_type,
+            tax_id: formData.tax_id || null,
+            address: formData.address ? { street: formData.address } : {},
+            settings: {},
+          });
 
         if (error) throw error;
       }
 
       await refreshBusinesses();
       setShowAddModal(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving business:', error);
-      alert('Failed to save business. Please try again.');
+      alert(error?.message || 'Failed to save business. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSetDefault = async (businessId: string) => {
-    try {
-      await supabase.from('businesses').update({ is_default: false }).eq('user_id', user?.id);
-
-      await supabase.from('businesses').update({ is_default: true }).eq('id', businessId);
-
-      await refreshBusinesses();
-    } catch (error) {
-      console.error('Error setting default:', error);
-    }
+  const handleSetDefault = async (_businessId: string) => {
+    // Optional: implement default selection in app state or settings.
+    setCurrentBusiness(businesses.find(b => b.id === _businessId)!);
   };
 
   const handleDelete = async (businessId: string) => {
