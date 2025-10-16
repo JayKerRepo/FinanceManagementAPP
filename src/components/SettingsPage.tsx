@@ -18,6 +18,8 @@ import {
   Settings,
   Plus,
 } from 'lucide-react';
+import SubscriptionManager from './SubscriptionManager';
+import PaymentMethodsManager from './PaymentMethodsManager';
 
 interface Props {
   onNavigate?: (page: 'home' | 'accounts' | 'reports' | 'settings' | 'budgets') => void;
@@ -30,6 +32,8 @@ export default function SettingsPage({ onNavigate, currentPage = 'settings' }: P
   const [pushNotifications, setPushNotifications] = useState(true);
   const [autoBackup, setAutoBackup] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSubscriptionManager, setShowSubscriptionManager] = useState(false);
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a1d35] to-[#0f1221] text-white pb-24">
@@ -77,16 +81,25 @@ export default function SettingsPage({ onNavigate, currentPage = 'settings' }: P
             <p className="font-semibold">February 20, 2025</p>
           </div>
           <div className="flex gap-2">
-            <button className="flex-1 py-2.5 bg-white text-blue-600 rounded-xl font-semibold hover:bg-white/90 transition text-sm">
+            <button
+              onClick={() => setShowSubscriptionManager(true)}
+              className="flex-1 py-2.5 bg-white text-blue-600 rounded-xl font-semibold hover:bg-white/90 transition text-sm"
+            >
               Upgrade Plan
             </button>
-            <button className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition text-sm">
+            <button
+              onClick={() => setShowSubscriptionManager(true)}
+              className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition text-sm"
+            >
               Manage
             </button>
           </div>
         </div>
         <div className="space-y-2">
-          <button className="w-full bg-[#1e2337] rounded-2xl p-4 border border-white/5 hover:border-blue-500/30 transition flex items-center gap-4 group">
+          <button
+            onClick={() => setShowPaymentMethods(true)}
+            className="w-full bg-[#1e2337] rounded-2xl p-4 border border-white/5 hover:border-blue-500/30 transition flex items-center gap-4 group"
+          >
             <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
               <CreditCard className="w-5 h-5 text-green-400" />
             </div>
@@ -310,6 +323,18 @@ export default function SettingsPage({ onNavigate, currentPage = 'settings' }: P
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modals */}
+      {showSubscriptionManager && (
+        <SubscriptionManager
+          currentPlan="pro"
+          onClose={() => setShowSubscriptionManager(false)}
+        />
+      )}
+
+      {showPaymentMethods && (
+        <PaymentMethodsManager onClose={() => setShowPaymentMethods(false)} />
       )}
 
       {/* Bottom Navigation - only show if onNavigate is provided */}

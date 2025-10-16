@@ -97,6 +97,48 @@ export default function DashboardMock() {
       category: 'Income',
       icon: '💰'
     },
+    {
+      id: 3,
+      title: 'Marketing Campaign',
+      description: 'Facebook Ads - Q1',
+      amount: -450,
+      date: '4 days ago',
+      category: 'Marketing',
+      icon: '📱'
+    },
+  ];
+
+  const recentExpenses = [
+    {
+      id: 1,
+      vendor: 'Office Depot',
+      amount: 245.50,
+      category: 'Office & Admin',
+      date: '2025-01-20',
+      paymentMethod: 'Corporate Card ****4532',
+      status: 'pending',
+      hasReceipt: true,
+    },
+    {
+      id: 2,
+      vendor: 'Starbucks',
+      amount: 32.75,
+      category: 'Travel & Meals',
+      date: '2025-01-19',
+      paymentMethod: 'Cash',
+      status: 'approved',
+      hasReceipt: true,
+    },
+    {
+      id: 3,
+      vendor: 'Amazon Web Services',
+      amount: 189.00,
+      category: 'Software',
+      date: '2025-01-18',
+      paymentMethod: 'ACH Transfer',
+      status: 'approved',
+      hasReceipt: false,
+    },
   ];
 
   const handleFileAttach = () => {
@@ -220,16 +262,6 @@ export default function DashboardMock() {
             >
               <Building2 className="w-5 h-5" />
               {!sidebarCollapsed && <span className="font-medium">Business Management</span>}
-            </button>
-
-            <button
-              onClick={() => setActivePage('settings')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
-                activePage === 'settings' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
-              }`}
-            >
-              <Settings className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="font-medium">Settings</span>}
             </button>
           </nav>
 
@@ -382,6 +414,69 @@ export default function DashboardMock() {
                 </div>
               </div>
 
+              {/* Expense Preview */}
+              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold">Recent Expenses</h3>
+                  <button
+                    onClick={() => setActivePage('expenses')}
+                    className="text-sm text-blue-400 hover:text-blue-300 transition"
+                  >
+                    View All
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {recentExpenses.map((expense) => (
+                    <div key={expense.id} className="bg-[#252a41] p-4 rounded-xl">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm mb-1">{expense.vendor}</p>
+                          <p className="text-xs text-gray-400">{expense.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-red-400">${expense.amount.toFixed(2)}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            expense.status === 'approved'
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {expense.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{new Date(expense.date).toLocaleDateString()}</span>
+                        <span>{expense.paymentMethod}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activity - Moved Above Voice/Chat */}
+              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
+                <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
+                <div className="space-y-3">
+                  {recentTransactions.map((transaction) => (
+                    <div key={transaction.id} className="bg-[#252a41] p-4 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-xl">
+                          {transaction.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm mb-1">{transaction.title}</p>
+                          <p className="text-xs text-gray-400 mb-2">{transaction.description}</p>
+                          <p className="text-xs text-gray-500">{transaction.date}</p>
+                        </div>
+                        <p className={`text-lg font-bold ${transaction.amount < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                          {transaction.amount < 0 ? '-' : '+'}${Math.abs(transaction.amount).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Voice Assistant & Smart Chat */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
@@ -483,29 +578,6 @@ export default function DashboardMock() {
                 </div>
               </div>
 
-              {/* Recent Transactions */}
-              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
-                <div className="space-y-3">
-                  {recentTransactions.map((transaction) => (
-                    <div key={transaction.id} className="bg-[#252a41] p-4 rounded-xl">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center text-xl">
-                          {transaction.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm mb-1">{transaction.title}</p>
-                          <p className="text-xs text-gray-400 mb-2">{transaction.description}</p>
-                          <p className="text-xs text-gray-500">{transaction.date}</p>
-                        </div>
-                        <p className={`text-lg font-bold ${transaction.amount < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {transaction.amount < 0 ? '-' : '+'}${Math.abs(transaction.amount).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -515,19 +587,40 @@ export default function DashboardMock() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-[#1a1d2e]/95 backdrop-blur-xl border-t border-white/5 z-40">
-        <div className="flex items-center justify-around px-6 py-4">
+        <div className="flex items-center justify-around px-4 py-3">
           <button
             onClick={() => setActivePage('dashboard')}
             className={`flex flex-col items-center gap-1 transition ${
               activePage === 'dashboard' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
             }`}
           >
-            <Home className="w-6 h-6" />
+            <Home className="w-5 h-5" />
             <span className="text-xs font-medium">Home</span>
           </button>
 
-          <button className="text-gray-400 hover:text-white transition">
-            <ChevronRight className="w-6 h-6" />
+          <button
+            onClick={() => setActivePage('inbox')}
+            className={`flex flex-col items-center gap-1 transition relative ${
+              activePage === 'inbox' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <Inbox className="w-5 h-5" />
+            <span className="text-xs font-medium">Inbox</span>
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold">
+                {unreadNotifications}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActivePage('invoices')}
+            className={`flex flex-col items-center gap-1 transition ${
+              activePage === 'invoices' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <FileText className="w-5 h-5" />
+            <span className="text-xs font-medium">Invoices</span>
           </button>
 
           <button
@@ -538,13 +631,23 @@ export default function DashboardMock() {
           </button>
 
           <button
-            onClick={() => setActivePage('accounts')}
+            onClick={() => setActivePage('pnl')}
             className={`flex flex-col items-center gap-1 transition ${
-              activePage === 'accounts' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
+              activePage === 'pnl' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
             }`}
           >
-            <CreditCard className="w-6 h-6" />
-            <span className="text-xs font-medium">Accounts</span>
+            <TrendingUp className="w-5 h-5" />
+            <span className="text-xs font-medium">P&L</span>
+          </button>
+
+          <button
+            onClick={() => setActivePage('mileage')}
+            className={`flex flex-col items-center gap-1 transition ${
+              activePage === 'mileage' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <MapPin className="w-5 h-5" />
+            <span className="text-xs font-medium">Mileage</span>
           </button>
 
           <button
@@ -553,7 +656,7 @@ export default function DashboardMock() {
               activePage === 'reports' ? 'text-[#5b6ef6]' : 'text-gray-400 hover:text-white'
             }`}
           >
-            <BarChart3 className="w-6 h-6" />
+            <BarChart3 className="w-5 h-5" />
             <span className="text-xs font-medium">Reports</span>
           </button>
         </div>
