@@ -25,21 +25,39 @@ import {
   Send,
   X,
   Check,
+  LogOut,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useBusiness } from '../contexts/BusinessContext';
+import BusinessSwitcher from './BusinessSwitcher';
+import AccountsPage from './AccountsPage';
+import BudgetsPage from './BudgetsPage';
+import ReportsPage from './ReportsPage';
+import SettingsPage from './SettingsPage';
+import BusinessManagementPage from './BusinessManagementPage';
 
 export default function DashboardMock() {
+  const { profile, signOut } = useAuth();
+  const { currentBusiness, accounts } = useBusiness();
   const [activePage, setActivePage] = useState('dashboard');
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showChatAgent, setShowChatAgent] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  const currentBusiness = {
-    name: 'Chase Fargo Pass B020:08',
-    description: 'Retail & Restaurants',
-    avatar: '/api/placeholder/40/40'
+  const handleSignOut = async () => {
+    await signOut();
+    window.location.href = '/';
+  };
+
+  const getBusinessDisplay = () => {
+    if (!currentBusiness) return 'No Business Selected';
+    const account = accounts[0];
+    const accountNumber = account?.account_number || 'N/A';
+    return `${currentBusiness.name} ${accountNumber}`;
   };
 
   const monthBreakdown = [
@@ -94,7 +112,7 @@ export default function DashboardMock() {
             >
               <Menu className="w-6 h-6 text-gray-400" />
               {!sidebarCollapsed && (
-                <span className="text-sm text-gray-400">Harshal's businesses overview</span>
+                <span className="text-sm text-gray-400">{profile?.full_name || 'User'}'s businesses</span>
               )}
             </button>
           </div>
@@ -151,6 +169,16 @@ export default function DashboardMock() {
             </button>
 
             <button
+              onClick={() => setActivePage('businesses')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                activePage === 'businesses' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <Building2 className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Business Management</span>}
+            </button>
+
+            <button
               onClick={() => setActivePage('settings')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 activePage === 'settings' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
@@ -165,15 +193,19 @@ export default function DashboardMock() {
             <div className="p-4 border-t border-white/5 space-y-3">
               <div className="flex items-center gap-3 p-3 bg-[#252a41] rounded-xl">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-sm font-bold">
-                  CF
+                  {profile?.full_name?.substring(0, 2).toUpperCase() || 'U'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{currentBusiness.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{currentBusiness.description}</p>
+                  <p className="text-sm font-semibold truncate">{profile?.full_name || 'User'}</p>
+                  <p className="text-xs text-gray-400 truncate">{profile?.email}</p>
                 </div>
               </div>
-              <button className="w-full py-3 bg-[#5b6ef6] hover:bg-[#4a5ee5] rounded-xl font-semibold transition">
-                Add New Business
+              <button
+                onClick={handleSignOut}
+                className="w-full py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
               </button>
             </div>
           )}
@@ -183,23 +215,56 @@ export default function DashboardMock() {
       {/* Main Content */}
       <main className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'} pb-20`}>
         <header className="bg-[#1a1d2e]/50 backdrop-blur-xl border-b border-white/5 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Good morning, Sarah</h1>
-              <p className="text-sm text-gray-400">Here's your business overview</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl font-bold mb-1">Welcome, {profile?.full_name || 'User'}!</h1>
+              <p className="text-sm text-gray-400">
+                {currentBusiness ? `${getBusinessDisplay()} - ${currentBusiness.business_type}` : 'No business selected'}
+              </p>
             </div>
             <div className="flex items-center gap-4">
+              <BusinessSwitcher />
               <button className="px-4 py-2 bg-[#5b6ef6] hover:bg-[#4a5ee5] rounded-xl font-semibold transition">
                 <Plus className="w-5 h-5 inline mr-2" />
                 Add Entry
               </button>
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5" />
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center hover:opacity-90 transition"
+                >
+                  {profile?.full_name?.substring(0, 1).toUpperCase() || 'U'}
+                </button>
+                {showUserMenu && (
+                  <div className="absolute top-full right-0 mt-2 bg-[#1a2332] rounded-xl border border-white/10 shadow-2xl py-2 min-w-[200px] z-50">
+                    <button
+                      onClick={() => { setActivePage('settings'); setShowUserMenu(false); }}
+                      className="w-full px-4 py-2 text-left hover:bg-[#252a41] transition flex items-center gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Profile Settings
+                    </button>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full px-4 py-2 text-left hover:bg-[#252a41] transition flex items-center gap-2 text-red-400"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </header>
 
+        {activePage === 'expenses' && <AccountsPage />}
+        {activePage === 'reports' && <ReportsPage />}
+        {activePage === 'invoices' && <BudgetsPage />}
+        {activePage === 'businesses' && <BusinessManagementPage />}
+        {activePage === 'settings' && <SettingsPage />}
+
+        {activePage === 'dashboard' && (
         <div className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Left Column - Stats */}
@@ -377,6 +442,8 @@ export default function DashboardMock() {
             </div>
           </div>
         </div>
+        )}
+
       </main>
 
       {/* Bottom Navigation */}
