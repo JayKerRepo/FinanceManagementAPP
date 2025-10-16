@@ -26,16 +26,16 @@ function App() {
 
   if (!isReady) {
     return (
-      <div className="min-h-screen bg-[#1a1d2e] flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen bg-[#0f1729] flex items-center justify-center">
+        <div className="text-white text-xl font-semibold">Loading...</div>
       </div>
     );
   }
 
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#1a1d2e] flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen bg-[#0f1729] flex items-center justify-center">
+        <div className="text-white text-xl font-semibold">Loading...</div>
       </div>
     }>
       {currentPage === 'demo' ? <DemoPage /> : <LandingPage />}

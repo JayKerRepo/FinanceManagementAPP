@@ -1,14 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+* {
+  font-family: 'Montserrat', sans-serif;
+}
 
 html {
   scroll-behavior: smooth;
 }
 
+body {
+  background: #0f1729;
+  color: #ffffff;
+}
+
 @layer utilities {
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -18,16 +38,16 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: #1a2332;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: #2d3748;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #4a5568;
 }
 
 /* Smooth transitions for all interactive elements */
@@ -40,7 +60,7 @@ html {
 /* Focus styles for accessibility */
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #4F7CFF;
   outline-offset: 2px;
 }
 
@@ -112,34 +132,57 @@ a:focus-visible {
 
 /* Glow effect */
 .glow {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(79, 124, 255, 0.3);
 }
 
 .glow:hover {
-  box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 30px rgba(79, 124, 255, 0.5);
 }
 
 /* Custom button styles */
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #4F7CFF, #7B5CFF);
   transition: all 0.3s ease;
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  background: linear-gradient(135deg, #3D6AFF, #6A4BFF);
   transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 10px 25px rgba(79, 124, 255, 0.3);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 28px;
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-2px);
+}
+
+/* Card styles matching the design */
+.card-dark {
+  background: #1a2332;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.card-dark:hover {
+  border-color: rgba(79, 124, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 /* Card hover effects */
@@ -149,15 +192,62 @@ a:focus-visible {
 
 .card-hover:hover {
   transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
-/* Text gradient */
+/* Text gradient matching design */
 .text-gradient {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #4F7CFF, #7B5CFF);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.text-gradient-secondary {
+  background: linear-gradient(135deg, #60A5FA, #A78BFA);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Feature card icons */
+.feature-icon {
+  background: linear-gradient(135deg, #4F7CFF, #7B5CFF);
+  border-radius: 12px;
+  padding: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Testimonial card */
+.testimonial-card {
+  background: #1a2332;
+  border: 1px solid rgba(79, 124, 255, 0.2);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+/* FAQ accordion */
+.faq-item {
+  background: #1a2332;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.faq-item:hover {
+  border-color: rgba(79, 124, 255, 0.3);
+  background: #1e2738;
+}
+
+/* CTA section gradient */
+.cta-gradient {
+  background: linear-gradient(135deg, #4F7CFF 0%, #7B5CFF 100%);
+  border-radius: 20px;
+  padding: 60px 40px;
 }
 
 /* Responsive design helpers */
@@ -165,9 +255,15 @@ a:focus-visible {
   .mobile-center {
     text-align: center;
   }
-  
+
   .mobile-full {
     width: 100%;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 12px 24px;
+    font-size: 14px;
   }
 }
 
@@ -176,15 +272,15 @@ a:focus-visible {
   .bg-gray-900 {
     background-color: #000000;
   }
-  
+
   .bg-gray-800 {
     background-color: #1a1a1a;
   }
-  
+
   .text-gray-300 {
     color: #ffffff;
   }
-  
+
   .text-gray-400 {
     color: #cccccc;
   }
@@ -204,9 +300,28 @@ a:focus-visible {
   .no-print {
     display: none !important;
   }
-  
+
   body {
     background: white !important;
     color: black !important;
   }
+}
+
+/* Number badges for steps */
+.step-badge {
+  background: #4F7CFF;
+  color: white;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+/* Star ratings */
+.star-rating {
+  color: #FFC107;
 }
