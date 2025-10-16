@@ -26,6 +26,10 @@ import {
   X,
   Check,
   LogOut,
+  Inbox,
+  MapPin,
+  Bell,
+  Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,6 +40,10 @@ import BudgetsPage from './BudgetsPage';
 import ReportsPage from './ReportsPage';
 import SettingsPage from './SettingsPage';
 import BusinessManagementPage from './BusinessManagementPage';
+import InvoicesPage from './InvoicesPage';
+import ProfitLossPage from './ProfitLossPage';
+import MileagePage from './MileagePage';
+import InboxPage from './InboxPage';
 
 export default function DashboardMock() {
   const { profile, signOut } = useAuth();
@@ -47,6 +55,7 @@ export default function DashboardMock() {
   const [chatMessage, setChatMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(4);
 
   const handleSignOut = async () => {
     await signOut();
@@ -139,6 +148,21 @@ export default function DashboardMock() {
             </button>
 
             <button
+              onClick={() => setActivePage('inbox')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition relative ${
+                activePage === 'inbox' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <Inbox className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Inbox</span>}
+              {unreadNotifications > 0 && (
+                <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold">
+                  {unreadNotifications}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setActivePage('invoices')}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
                 activePage === 'invoices' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
@@ -146,6 +170,26 @@ export default function DashboardMock() {
             >
               <FileText className="w-5 h-5" />
               {!sidebarCollapsed && <span className="font-medium">Invoices</span>}
+            </button>
+
+            <button
+              onClick={() => setActivePage('budgets')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                activePage === 'budgets' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <Wallet className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Budgets</span>}
+            </button>
+
+            <button
+              onClick={() => setActivePage('mileage')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                activePage === 'mileage' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <MapPin className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Mileage</span>}
             </button>
 
             <button
@@ -228,6 +272,17 @@ export default function DashboardMock() {
                 <Plus className="w-5 h-5 inline mr-2" />
                 Add Entry
               </button>
+              <button
+                onClick={() => setActivePage('inbox')}
+                className="relative w-10 h-10 bg-[#2d3248] hover:bg-[#373d5f] rounded-full flex items-center justify-center transition"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </button>
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
@@ -236,7 +291,7 @@ export default function DashboardMock() {
                   {profile?.full_name?.substring(0, 1).toUpperCase() || 'U'}
                 </button>
                 {showUserMenu && (
-                  <div className="absolute top-full right-0 mt-2 bg-[#1a2332] rounded-xl border border-white/10 shadow-2xl py-2 min-w-[200px] z-50">
+                  <div className="absolute top-full right-0 mt-2 bg-[#1a2332] rounded-xl border border-white/10 shadow-2xl py-2 min-w-[220px] z-50">
                     <button
                       onClick={() => { setActivePage('settings'); setShowUserMenu(false); }}
                       className="w-full px-4 py-2 text-left hover:bg-[#252a41] transition flex items-center gap-2"
@@ -244,6 +299,14 @@ export default function DashboardMock() {
                       <Settings className="w-4 h-4" />
                       Profile Settings
                     </button>
+                    <button
+                      onClick={() => { setActivePage('settings'); setShowUserMenu(false); }}
+                      className="w-full px-4 py-2 text-left hover:bg-[#252a41] transition flex items-center gap-2"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      Manage Subscription
+                    </button>
+                    <div className="border-t border-white/10 my-2"></div>
                     <button
                       onClick={handleSignOut}
                       className="w-full px-4 py-2 text-left hover:bg-[#252a41] transition flex items-center gap-2 text-red-400"
@@ -260,7 +323,11 @@ export default function DashboardMock() {
 
         {activePage === 'expenses' && <AccountsPage />}
         {activePage === 'reports' && <ReportsPage />}
-        {activePage === 'invoices' && <BudgetsPage />}
+        {activePage === 'inbox' && <InboxPage />}
+        {activePage === 'invoices' && <InvoicesPage />}
+        {activePage === 'budgets' && <BudgetsPage />}
+        {activePage === 'mileage' && <MileagePage />}
+        {activePage === 'pnl' && <ProfitLossPage />}
         {activePage === 'businesses' && <BusinessManagementPage />}
         {activePage === 'settings' && <SettingsPage />}
 

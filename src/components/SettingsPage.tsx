@@ -57,6 +57,48 @@ export default function SettingsPage({ onNavigate, currentPage = 'settings' }: P
         </div>
       </div>
 
+      {/* Subscription Section */}
+      <div className="px-6 mb-6">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">SUBSCRIPTION</h3>
+        <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 mb-3">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="text-sm opacity-90 mb-1">Current Plan</p>
+              <h3 className="text-2xl font-bold">Professional</h3>
+              <p className="text-xs opacity-75 mt-1">Billed monthly</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold">$29</p>
+              <p className="text-xs opacity-75">/month</p>
+            </div>
+          </div>
+          <div className="bg-white/10 rounded-xl p-3 mb-4">
+            <p className="text-xs opacity-90 mb-2">Next billing date</p>
+            <p className="font-semibold">February 20, 2025</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="flex-1 py-2.5 bg-white text-blue-600 rounded-xl font-semibold hover:bg-white/90 transition text-sm">
+              Upgrade Plan
+            </button>
+            <button className="flex-1 py-2.5 bg-white/10 hover:bg-white/20 rounded-xl font-semibold transition text-sm">
+              Manage
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <button className="w-full bg-[#1e2337] rounded-2xl p-4 border border-white/5 hover:border-blue-500/30 transition flex items-center gap-4 group">
+            <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <CreditCard className="w-5 h-5 text-green-400" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-semibold text-sm mb-0.5">Payment Methods</p>
+              <p className="text-xs text-gray-400">Manage billing and payment</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:translate-x-1 transition" />
+          </button>
+        </div>
+      </div>
+
       {/* Account Section */}
       <div className="px-6 mb-6">
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">ACCOUNT</h3>

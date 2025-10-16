@@ -22,10 +22,14 @@ import ReportsPage from './ReportsPage';
 import SettingsPage from './SettingsPage';
 import BudgetsPage from './BudgetsPage';
 import AddTransactionModal from './AddTransactionModal';
+import InvoicesPage from './InvoicesPage';
+import ProfitLossPage from './ProfitLossPage';
+import MileagePage from './MileagePage';
+import InboxPage from './InboxPage';
 
 export default function DemoPage() {
   const [viewMode, setViewMode] = useState<'mobile' | 'desktop'>('mobile');
-  const [currentPage, setCurrentPage] = useState<'home' | 'accounts' | 'reports' | 'settings' | 'budgets'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'accounts' | 'reports' | 'settings' | 'budgets' | 'invoices' | 'pnl' | 'mileage' | 'inbox'>('home');
   const [isListening, setIsListening] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState('Chase Fargo Pass B020:08');
   const [showBusinessDropdown, setShowBusinessDropdown] = useState(false);
@@ -320,6 +324,10 @@ export default function DemoPage() {
                     {currentPage === 'budgets' && <BudgetsPage onNavigate={setCurrentPage} currentPage={currentPage} />}
                     {currentPage === 'reports' && <ReportsPage onNavigate={setCurrentPage} currentPage={currentPage} />}
                     {currentPage === 'settings' && <SettingsPage onNavigate={setCurrentPage} currentPage={currentPage} />}
+                    {currentPage === 'inbox' && <InboxPage />}
+                    {currentPage === 'invoices' && <InvoicesPage />}
+                    {currentPage === 'pnl' && <ProfitLossPage />}
+                    {currentPage === 'mileage' && <MileagePage />}
                   </div>
                 </div>
               </div>
@@ -333,6 +341,10 @@ export default function DemoPage() {
               {currentPage === 'budgets' && <BudgetsPage onNavigate={setCurrentPage} currentPage={currentPage} />}
               {currentPage === 'reports' && <ReportsPage onNavigate={setCurrentPage} currentPage={currentPage} />}
               {currentPage === 'settings' && <SettingsPage onNavigate={setCurrentPage} currentPage={currentPage} />}
+              {currentPage === 'inbox' && <InboxPage />}
+              {currentPage === 'invoices' && <InvoicesPage />}
+              {currentPage === 'pnl' && <ProfitLossPage />}
+              {currentPage === 'mileage' && <MileagePage />}
             </div>
           </div>
         )}
