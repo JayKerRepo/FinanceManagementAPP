@@ -38,16 +38,18 @@ import BusinessSwitcher from './BusinessSwitcher';
 import AccountsPage from './AccountsPage';
 import BudgetsPage from './BudgetsPage';
 import ReportsPage from './ReportsPage';
+import ExpenseEntryHub from './ExpenseEntryHub';
 import SettingsPage from './SettingsPage';
 import BusinessManagementPage from './BusinessManagementPage';
 import InvoicesPage from './InvoicesPage';
 import ProfitLossPage from './ProfitLossPage';
 import MileagePage from './MileagePage';
 import InboxPage from './InboxPage';
+import CategoryManagement from './CategoryManagement';
 
 export default function DashboardMock() {
   const { profile, signOut } = useAuth();
-  const { currentBusiness, accounts } = useBusiness();
+  const { currentBusiness, accounts, businesses } = useBusiness();
   const [activePage, setActivePage] = useState('dashboard');
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [showChatAgent, setShowChatAgent] = useState(false);
@@ -56,6 +58,7 @@ export default function DashboardMock() {
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(4);
+  const [expenseEntryMode, setExpenseEntryMode] = useState<'voice' | 'chat' | 'ocr' | 'manual'>('voice');
 
   const handleSignOut = async () => {
     await signOut();
@@ -187,6 +190,16 @@ export default function DashboardMock() {
             >
               <Receipt className="w-5 h-5" />
               {!sidebarCollapsed && <span className="font-medium">Expenses</span>}
+            </button>
+
+            <button
+              onClick={() => setActivePage('categories')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                activePage === 'categories' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <PieChart className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Categories</span>}
             </button>
 
             <button
@@ -354,6 +367,7 @@ export default function DashboardMock() {
         </header>
 
         {activePage === 'expenses' && <AccountsPage />}
+        {activePage === 'categories' && <CategoryManagement />}
         {activePage === 'reports' && <ReportsPage />}
         {activePage === 'inbox' && <InboxPage />}
         {activePage === 'invoices' && <InvoicesPage />}
@@ -414,46 +428,7 @@ export default function DashboardMock() {
                 </div>
               </div>
 
-              {/* Expense Preview */}
-              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold">Recent Expenses</h3>
-                  <button
-                    onClick={() => setActivePage('expenses')}
-                    className="text-sm text-blue-400 hover:text-blue-300 transition"
-                  >
-                    View All
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {recentExpenses.map((expense) => (
-                    <div key={expense.id} className="bg-[#252a41] p-4 rounded-xl">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm mb-1">{expense.vendor}</p>
-                          <p className="text-xs text-gray-400">{expense.category}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-red-400">${expense.amount.toFixed(2)}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            expense.status === 'approved'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-yellow-500/20 text-yellow-400'
-                          }`}>
-                            {expense.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{new Date(expense.date).toLocaleDateString()}</span>
-                        <span>{expense.paymentMethod}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Activity - Moved Above Voice/Chat */}
+              {/* Recent Activity */}
               <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
                 <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
                 <div className="space-y-3">
@@ -484,7 +459,10 @@ export default function DashboardMock() {
                   <div className="text-center">
                     <p className="text-gray-400 text-sm mb-6">Ask me anything<br />about your finances</p>
                     <button
-                      onClick={() => setShowVoiceModal(true)}
+                      onClick={() => {
+                        setExpenseEntryMode('voice');
+                        setShowVoiceModal(true);
+                      }}
                       className="relative group mx-auto mb-4"
                     >
                       <div className="w-32 h-32 bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 rounded-full flex items-center justify-center relative overflow-hidden transition-transform group-hover:scale-105">
@@ -504,7 +482,10 @@ export default function DashboardMock() {
                   <div className="text-center">
                     <p className="text-gray-400 text-sm mb-6">Ask questions or add expenses naturally</p>
                     <button
-                      onClick={() => setShowChatAgent(true)}
+                      onClick={() => {
+                        setExpenseEntryMode('chat');
+                        setShowVoiceModal(true);
+                      }}
                       className="w-full py-4 bg-gradient-to-r from-[#5b6ef6] to-[#8b5cf6] rounded-xl font-semibold hover:scale-105 transition flex items-center justify-center gap-3"
                     >
                       <MessageSquare className="w-6 h-6" />
@@ -573,6 +554,52 @@ export default function DashboardMock() {
                         <span className="text-sm text-gray-300">{item.category}</span>
                       </div>
                       <span className="text-sm font-bold">${item.amount.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Expenses - Right Column */}
+              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold">Recent Expenses</h3>
+                  <button
+                    onClick={() => setActivePage('expenses')}
+                    className="text-sm text-blue-400 hover:text-blue-300 transition"
+                  >
+                    View All
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {recentExpenses.map((expense) => (
+                    <div key={expense.id} className="bg-[#252a41] p-4 rounded-xl hover:bg-[#2d3248] transition">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-semibold text-sm mb-1">{expense.vendor}</p>
+                          <p className="text-xs text-gray-400">{expense.category}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-red-400">${expense.amount.toFixed(2)}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            expense.status === 'approved'
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {expense.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>{new Date(expense.date).toLocaleDateString()}</span>
+                        <span>{expense.paymentMethod}</span>
+                      </div>
+                      {expense.hasReceipt && (
+                        <div className="mt-2 pt-2 border-t border-white/5">
+                          <span className="text-xs text-blue-400 flex items-center gap-1">
+                            📎 Receipt attached
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -662,75 +689,19 @@ export default function DashboardMock() {
         </div>
       </nav>
 
-      {/* Voice Modal */}
+      {/* Expense Entry Hub */}
       {showVoiceModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-          <div className="bg-[#1a1d2e] rounded-3xl p-8 max-w-2xl w-full border border-white/10">
-            <div className="text-center mb-6">
-              <div className="w-32 h-32 bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 relative">
-                <div className="absolute inset-0 bg-purple-600/50 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-                <Mic className="w-16 h-16 relative z-10" />
-              </div>
-              <h3 className="text-2xl font-bold mb-2">Smart Expense Entry</h3>
-              <p className="text-gray-400">
-                Voice, chat, or upload receipt - I'll handle the rest
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="bg-[#252a41] rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <MessageSquare className="w-5 h-5 text-[#5b6ef6]" />
-                  <span className="font-semibold">Chat Input</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Type expense details: '$50 coffee at Starbucks for consulting business'"
-                  className="w-full bg-[#1a1d2e] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-[#5b6ef6] focus:outline-none"
-                />
-              </div>
-
-              <div className="bg-[#252a41] rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Upload className="w-5 h-5 text-[#5b6ef6]" />
-                  <span className="font-semibold">Upload Receipt (OCR)</span>
-                </div>
-                <button className="w-full py-3 bg-[#1a1d2e] border border-dashed border-white/20 rounded-lg text-gray-400 hover:border-[#5b6ef6] hover:text-white transition">
-                  Click to upload or drag & drop
-                </button>
-              </div>
-
-              <div className="bg-[#252a41] rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <Camera className="w-5 h-5 text-[#5b6ef6]" />
-                  <span className="font-semibold">Scan Receipt</span>
-                </div>
-                <button className="w-full py-3 bg-[#5b6ef6] hover:bg-[#4a5ee5] rounded-lg font-semibold transition">
-                  Open Camera
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-6 bg-[#252a41] rounded-xl p-4">
-              <p className="text-sm text-gray-400 text-center">
-                <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
-                Voice assistant is listening...
-              </p>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowVoiceModal(false)}
-                className="flex-1 py-3 bg-[#252a41] rounded-xl font-semibold hover:bg-[#2d3248] transition"
-              >
-                Cancel
-              </button>
-              <button className="flex-1 py-3 bg-[#5b6ef6] hover:bg-[#4a5ee5] rounded-xl font-semibold transition">
-                Review & Submit
-              </button>
-            </div>
-          </div>
-        </div>
+        <ExpenseEntryHub
+          businesses={businesses}
+          initialMode={expenseEntryMode}
+          onClose={() => {
+            setShowVoiceModal(false);
+            setExpenseEntryMode('voice');
+          }}
+          onExpenseAdded={(expense) => {
+            console.log('Expense added:', expense);
+          }}
+        />
       )}
 
       {/* Smart Chat Agent Modal */}
