@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#1a1d2e] text-white;
+  }
+}
+
+@layer utilities {
+  .gradient-blue {
+    background: linear-gradient(135deg, #5b6ef6 0%, #6b7bff 100%);
+  }
+
+  .gradient-purple {
+    background: linear-gradient(135deg, #8b5cf6 0%, #9333ea 100%);
+  }
+
+  .card-glow {
+    box-shadow: 0 8px 32px rgba(91, 110, 246, 0.15);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #5b6ef6 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 0.9;
+    }
+  }
+
+  @keyframes pulse-subtle {
+    0%, 100% {
+      opacity: 0.9;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
