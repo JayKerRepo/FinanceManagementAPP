@@ -1,0 +1,48 @@
+Multi-Business Finance App (Expense + Invoice + P&L + Reports + Tax + AI).
+
+It’s structured for clarity, comparison, and conversion, and ready for a pricing page or investor deck.
+
+💳 Subscription Plans — Multi-Business Finance Suite
+Plan	Free (Solo Starter)	Pro (Multi-Business Manager)	Growth (AI + Teams)	Enterprise (Finance Suite / White-Label)
+💼 Target User	Freelancers, solo owners	Small biz owners (2–3 entities)	SMEs with teams	Accounting firms, agencies, CFO orgs
+💲 Price (Monthly)	$0 (Free Forever)	$29/mo (or $290/yr)	$59/mo (or $590/yr)	Custom (starts $149+)*
+🏢 # of Businesses	1 business only	Up to 3 businesses	Unlimited	Unlimited + multi-entity consolidation
+👥 Users / Roles	1 user	3 users	Unlimited users + roles	Unlimited + custom permissions
+🧾 Invoices	Unlimited	Unlimited	Unlimited + recurring	Unlimited + custom branding
+💳 Expenses	Manual entry + 20 OCR/mo	Unlimited OCR + bank sync	Smart OCR + AI categorization	AI policy engine + bulk imports
+📊 P&L Reports	Basic per-business	Multi-business reports	AI forecasting + trends	Consolidated P&L + KPI analytics
+📈 Budgeting & Forecasting	Manual setup	Templates + comparison	AI-powered forecasting	Departmental forecasting
+🤖 AI Assistant	—	Basic insights	Full voice + chat assistant	Custom AI + predictive finance
+🧮 Tax Prep Reports	Single entity (Schedule C)	Multi-entity	1099 + Auto filing export	Advanced tax integration (QuickBooks, NetSuite)
+🔄 Automation	Manual sync	Bank & card sync	Auto reconciliation + reminders	API-based integrations
+🗂️ Approvals & Roles	—	Basic workflow	Full approval routing	Custom workflows
+💬 Collaboration	—	Add accountant	Team comments + mentions	Full audit log + multi-team
+📤 Exports	PDF only	PDF + Excel	PDF + Excel + Google Drive	API, SFTP, and automated exports
+🎨 Branding	Default “MoneyMint”	Custom invoice logo	Branded reports & dashboard	White-label domain + theme
+📱 Mobile Access	✅	✅	✅ + push alerts	✅ + SSO mobile access
+🧠 AI Insights	Limited tips	Category insights	Predictive spend alerts	Benchmarking vs industry peers
+🧾 Receipt Management	20/mo limit	Unlimited	Smart grouping + auto-translate	Bulk upload + audit trail
+⚙️ Integrations	—	Stripe, PayPal	QuickBooks, Xero, Zoho	SAP, NetSuite, HubSpot
+📞 Support	Community help	Email support	Priority chat support	Dedicated manager + SLA
+🏅 Add-Ons Available	—	Extra business slots, OCR booster	Advanced analytics, tax add-on	Custom API / White-label add-ons
+🧱 Optional Add-Ons (All Plans)
+Add-On	Description	Price
+Extra Business Slot	Add another business beyond plan limit	$9/mo each
+OCR Booster	500+ receipt scans per month	$5/mo
+Tax Pro Export	IRS / State-ready report generation	$10/mo
+Team Expansion	Add 5 more team members	$7/mo
+Branded Reports	Add company logo + theme to exports	$5/mo
+🧠 Upgrade Triggers (In-App Upsell Points)
+User Action	Upgrade Prompt	Target Plan
+Adds 2nd business	“Upgrade to Pro for multi-business management”	Pro
+Requests AI forecast	“AI Forecasting available in Growth plan”	Growth
+Invites accountant	“Add teammates in Growth plan”	Growth
+Needs tax export	“Generate tax-ready reports in Growth plan”	Growth
+Tries to white-label	“Unlock full brand control in Enterprise plan”	Enterprise
+🪄 Pricing Psychology Tips
+Principle	Execution
+Anchoring	Show Free → $29 → $59 → $149+ to guide perception of value.
+Highlight “Most Popular”	Feature the Growth Plan with glowing border / badge.
+Toggle Annual Discounts	“Save 20% when billed annually.”
+AI Teasers	Show AI insights in Free but blur results (“Upgrade to reveal”).
+Trust Boosters	“Free Forever for 1 Business” + “Cancel anytime.”
