@@ -56,45 +56,70 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   };
 
+  const [businessError, setBusinessError] = useState<string>('');
+
   const handleBusinessSubmit = async () => {
     setLoading(true);
+    setBusinessError('');
     try {
       if (!user) throw new Error('No user found');
 
-      const { data: business, error: businessError } = await supabase
+      const { error: businessInsertError } = await supabase
         .from('businesses')
         .insert({
-          user_id: user.id,
           name: businessData.name,
           business_type: businessData.business_type,
           tax_id: businessData.tax_id || null,
           address: businessData.address ? { street: businessData.address } : {},
-          is_default: true,
-        })
-        .select()
-        .single();
-
-      if (businessError) throw businessError;
-
-      const accountNumber = businessData.account_number || `B${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-
-      const { error: accountError } = await supabase
-        .from('accounts')
-        .insert({
-          business_id: business.id,
-          name: 'Business Checking',
-          account_type: 'checking',
-          bank_name: 'Default Bank',
-          currency: 'USD',
-          account_number: accountNumber,
+          settings: {},
         });
 
-      if (accountError) throw accountError;
+      if (businessInsertError) {
+        console.error('Business insert error:', businessInsertError);
+        throw new Error(businessInsertError.message || 'Business insert failed');
+      }
+
+      // Fetch the most recently created business (trigger has added membership)
+      const { data: latestList, error: listError } = await supabase
+        .from('businesses')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (listError || !latestList || !latestList[0]) {
+        throw new Error(listError?.message || 'Cannot read newly created business');
+      }
+
+      const business = latestList[0];
+
+      const accountNumber =
+        businessData.account_number ||
+        `B${Math.floor(Math.random() * 10000)
+          .toString()
+          .padStart(4, '0')}`;
+
+      const { error: accountError } = await supabase.from('accounts').insert({
+        business_id: business.id,
+        name: 'Business Checking',
+        account_type: 'checking',
+        bank_name: 'Default Bank',
+        currency: 'USD',
+        account_number: accountNumber,
+      });
+
+      if (accountError) {
+        console.error('Account insert error:', accountError);
+        throw new Error(accountError.message || 'Account creation failed');
+      }
 
       setStep(4);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating business:', error);
-      alert('Failed to create business. Please try again.');
+      const msg =
+        error?.message ||
+        error?.error?.message ||
+        (typeof error === 'string' ? error : JSON.stringify(error));
+      setBusinessError(msg);
     } finally {
       setLoading(false);
     }
@@ -263,6 +288,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             </div>
 
             <div className="space-y-4 mb-6">
+              {businessError && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-sm text-red-400">
+                  {businessError}
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-semibold mb-2 text-gray-300">
                   Business Name *

@@ -1,0 +1,15 @@
+import { Mail } from 'lucide-react';
+
+export default function VerifyEmailNotice() {
+  return (
+    <div className="min-h-screen bg-[#0f1729] flex items-center justify-center">
+      <div className="text-center text-white max-w-md">
+        <Mail className="w-12 h-12 mx-auto mb-4 text-blue-400" />
+        <h1 className="text-2xl font-semibold mb-2">Verify your email</h1>
+        <p className="text-gray-300">
+          We’ve sent a verification link to your email. Please verify, then return to the app.
+        </p>
+      </div>
+    </div>
+  );
+}

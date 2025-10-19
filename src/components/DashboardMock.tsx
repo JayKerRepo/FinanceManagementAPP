@@ -192,14 +192,15 @@ export default function DashboardMock() {
               {!sidebarCollapsed && <span className="font-medium">Expenses</span>}
             </button>
 
+            {/* Nested under Expenses: Manage Categories */}
             <button
               onClick={() => setActivePage('categories')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+              className={`w-full flex items-center gap-3 px-10 py-2 rounded-lg transition ${
                 activePage === 'categories' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
               }`}
             >
-              <PieChart className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="font-medium">Categories</span>}
+              <PieChart className="w-4 h-4" />
+              {!sidebarCollapsed && <span className="text-sm">Manage Categories</span>}
             </button>
 
             <button
@@ -267,15 +268,7 @@ export default function DashboardMock() {
               {!sidebarCollapsed && <span className="font-medium">Reports</span>}
             </button>
 
-            <button
-              onClick={() => setActivePage('businesses')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
-                activePage === 'businesses' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
-              }`}
-            >
-              <Building2 className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="font-medium">Business Management</span>}
-            </button>
+            {/* Business Management moved to profile dropdown */}
           </nav>
 
           {!sidebarCollapsed && (
@@ -313,10 +306,6 @@ export default function DashboardMock() {
             </div>
             <div className="flex items-center gap-4">
               <BusinessSwitcher />
-              <button className="px-4 py-2 bg-[#5b6ef6] hover:bg-[#4a5ee5] rounded-xl font-semibold transition">
-                <Plus className="w-5 h-5 inline mr-2" />
-                Add Entry
-              </button>
               <button
                 onClick={() => setActivePage('inbox')}
                 className="relative w-10 h-10 bg-[#2d3248] hover:bg-[#373d5f] rounded-full flex items-center justify-center transition"
@@ -343,6 +332,13 @@ export default function DashboardMock() {
                     >
                       <Settings className="w-4 h-4" />
                       Profile Settings
+                    </button>
+                    <button
+                      onClick={() => { setActivePage('businesses'); setShowUserMenu(false); }}
+                      className="w-full px-4 py-2 text-left hover:bg-[#252a41] transition flex items-center gap-2"
+                    >
+                      <Building2 className="w-4 h-4" />
+                      Business Management
                     </button>
                     <button
                       onClick={() => { setActivePage('settings'); setShowUserMenu(false); }}

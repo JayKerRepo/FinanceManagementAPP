@@ -4,12 +4,10 @@ import { useAuth } from './AuthContext';
 
 interface Business {
   id: string;
-  user_id: string;
   name: string;
   business_type: string;
-  tax_id: string | null;
-  address: any;
-  is_default: boolean;
+  tax_id?: string | null;
+  address?: any;
   created_at: string;
   updated_at: string;
 }
@@ -52,8 +50,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
-        .eq('user_id', user.id)
-        .order('is_default', { ascending: false })
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
@@ -61,14 +57,14 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       setBusinesses(data || []);
 
       const savedBusinessId = localStorage.getItem('currentBusinessId');
-      let current = null;
+      let current = null as Business | null;
 
       if (savedBusinessId) {
         current = data?.find(b => b.id === savedBusinessId) || null;
       }
 
       if (!current && data && data.length > 0) {
-        current = data.find(b => b.is_default) || data[0];
+        current = data[0];
       }
 
       setCurrentBusinessState(current);

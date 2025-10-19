@@ -3,11 +3,12 @@ import { Mail, Lock, User, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword, resendVerification } = useAuth() as any;
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
 
   const [formData, setFormData] = useState({
     email: '',
@@ -19,17 +20,33 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setInfo('');
 
     try {
       if (mode === 'signin') {
         const { error } = await signIn(formData.email, formData.password);
         if (error) throw error;
       } else {
-        const { error } = await signUp(formData.email, formData.password, formData.fullName);
+        // basic client validation
+        if (!formData.fullName.trim()) throw new Error('Full name is required');
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email)) throw new Error('Enter a valid email');
+        if ((formData.password || '').length < 8) throw new Error('Password must be at least 8 characters');
+
+        const { error } = await signUp(formData.email.trim(), formData.password, formData.fullName.trim());
         if (error) throw error;
+        setInfo('Account created. Please check your email to verify your address before signing in.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
+  } catch (err: any) {
+      const msg = err?.message || 'An error occurred';
+      if (/already\s*registered/i.test(msg) || /user\s*exists/i.test(msg)) {
+        setInfo('An account with this email already exists. Please sign in, or reset your password if you forgot it.');
+        setError('');
+      } else if (/email\s*not\s*confirmed/i.test(msg) || /not\s*confirmed/i.test(msg)) {
+        setInfo('Email not confirmed. Please check your inbox and verify your email before signing in.');
+        setError('');
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -149,6 +166,54 @@ export default function AuthPage() {
                 {error}
               </div>
             )}
+          {info && (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 text-sm text-blue-300">
+              {info}
+            </div>
+          )}
+
+          {mode === 'signin' && /not\s*confirmed/i.test(info) && (
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                type="button"
+                onClick={async () => {
+                  const email = (formData.email || '').trim();
+                  if (!email) { setError('Enter your email above to resend verification'); return; }
+                  const { error } = await (resendVerification?.(email) || Promise.resolve({ error: null }));
+                  if (error) setError(error.message || 'Failed to resend verification');
+                  else { setInfo('Verification email sent. Check your inbox.'); setError(''); }
+                }}
+                className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-sm transition"
+              >
+                Resend verification email
+              </button>
+            </div>
+          )}
+
+          {mode === 'signup' && info && (
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                type="button"
+                onClick={() => setMode('signin')}
+                className="px-3 py-2 bg-[#1a1d2e] border border-white/10 rounded-lg text-sm hover:bg-[#252a41] transition"
+              >
+                Go to Sign In
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const email = (formData.email || '').trim();
+                  if (!email) { setError('Enter your email above to reset password'); return; }
+                  const { error } = await (resetPassword?.(email) || Promise.resolve({ error: null }));
+                  if (error) setError(error.message || 'Failed to send reset email');
+                  else { setInfo('Password reset email sent. Check your inbox.'); setError(''); }
+                }}
+                className="px-3 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg text-sm transition"
+              >
+                Reset Password
+              </button>
+            </div>
+          )}
 
             <button
               type="submit"

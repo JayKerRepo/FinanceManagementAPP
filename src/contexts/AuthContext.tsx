@@ -24,6 +24,9 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
+  resetPassword?: (email: string) => Promise<{ error: Error | null }>;
+  resendVerification?: (email: string) => Promise<{ error: Error | null }>;
+  signInWithMagicLink?: (email: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,33 +120,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          // data: { full_name: fullName } // optional, if you want to carry through metadata
+        },
       });
-
       if (signUpError) throw signUpError;
-
-      if (data.user) {
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              email: data.user.email!,
-              full_name: fullName || null,
-            });
-
-          if (profileError) {
-            console.error('Profile creation error:', profileError);
-          }
-
-          await fetchProfile(data.user.id);
-        } catch (error) {
-          console.error('Error creating profile:', error);
-        }
-      }
-
+  
+      // Do not create profile here.
+      // After the user clicks the verification email and signs in, the DB trigger creates `profiles` (or we fetch then).
       return { error: null };
     } catch (error) {
       console.error('Error signing up:', error);
@@ -201,6 +189,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    });
+    return { error } as { error: Error | null };
+  };
+
+  const resendVerification = async (email: string) => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    return { error } as { error: Error | null };
+  };
+
+  const signInWithMagicLink = async (email: string) => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    });
+    return { error } as { error: Error | null };
+  };
+
   const value = {
     user,
     session,
@@ -211,6 +219,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     updateProfile,
     refreshProfile,
+    resetPassword,
+    resendVerification,
+    signInWithMagicLink,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
