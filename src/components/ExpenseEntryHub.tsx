@@ -469,21 +469,23 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
           ? editExpense.metadata 
           : {};
         
-        const { error } = await supabase
-          .from('transactions')
-          .update({
-            amount: exp.amount!,
-            description: description,
-            category: exp.category!,
-            date: exp.date || new Date().toISOString().split('T')[0],
-            receipt_url: (exp as any).receiptUrl || editExpense.receipt_url || null,
-            notes: exp.notes || null,
-            // Store payment method in metadata JSONB (not as a column)
-            metadata: {
-              ...existingMetadata,
-              payment_method: exp.paymentMethod || null,
-            },
-          })
+        const updateData: any = {
+          amount: exp.amount!,
+          description: description,
+          category: exp.category!,
+          date: exp.date || new Date().toISOString().split('T')[0],
+          receipt_url: (exp as any).receiptUrl || editExpense.receipt_url || null,
+          notes: exp.notes || null,
+          // Store payment method in metadata JSONB (not as a column)
+          metadata: {
+            ...existingMetadata,
+            payment_method: exp.paymentMethod || null,
+          },
+        };
+        
+        const { error } = await (supabase
+          .from('transactions') as any)
+          .update(updateData)
           .eq('id', editExpense.id);
 
         if (error) throw error;
@@ -495,15 +497,16 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
           .eq('transaction_id', editExpense.id)
           .single();
 
-        if (existingApproval) {
+        if (existingApproval && (existingApproval as any).id) {
           // Update existing approval to pending
-          await supabase
-            .from('expense_approvals')
-            .update({ 
-              status: 'pending',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingApproval.id);
+          const approvalUpdateData: any = { 
+            status: 'pending',
+            updated_at: new Date().toISOString(),
+          };
+          await (supabase
+            .from('expense_approvals') as any)
+            .update(approvalUpdateData)
+            .eq('id', (existingApproval as any).id);
         } else {
           // Create new approval entry for edited expense
           await supabase
@@ -513,7 +516,7 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
               transaction_id: editExpense.id,
               submitter_id: user.id,
               status: 'pending',
-            });
+            } as any);
         }
 
         // Fetch updated transaction

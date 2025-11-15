@@ -133,8 +133,8 @@ export default function DashboardMock() {
           .gte('date', lastYearStart)
           .lte('date', lastYearEnd);
 
-        const currentRevenue = allBusinessIncome?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
-        const lastYearRevenue = lastYearIncome?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+        const currentRevenue = (allBusinessIncome || []).reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+        const lastYearRevenue = (lastYearIncome || []).reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
         const change = lastYearRevenue > 0 ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100 : 0;
 
         setRevenue(currentRevenue);
@@ -156,7 +156,7 @@ export default function DashboardMock() {
             .gte('date', monthStart)
             .lte('date', monthEnd);
 
-          const monthRevenue = monthIncome?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+          const monthRevenue = (monthIncome || []).reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
           months.push({
             month: monthDate.toLocaleDateString('en-US', { month: 'short' }),
             revenue: monthRevenue
@@ -172,7 +172,7 @@ export default function DashboardMock() {
           .in('business_id', businessIds)
           .eq('is_active', true);
 
-        const assets = allAccounts?.reduce((sum, acc) => sum + (acc.balance || 0), 0) || 0;
+        const assets = (allAccounts || []).reduce((sum: number, acc: any) => sum + (acc.balance || 0), 0);
 
         // Liabilities: Outstanding invoices + credit card debts
         const { data: allInvoices } = await supabase
@@ -181,15 +181,15 @@ export default function DashboardMock() {
           .in('business_id', businessIds)
           .in('status', ['sent', 'partial', 'overdue']);
 
-        const outstandingInvoices = allInvoices?.reduce(
-          (sum, inv) => sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)),
+        const outstandingInvoices = (allInvoices || []).reduce(
+          (sum: number, inv: any) => sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)),
           0
-        ) || 0;
+        );
 
         // Credit card debts (negative balances)
-        const creditCardDebts = allAccounts
-          ?.filter(acc => acc.account_type === 'credit_card' && acc.balance < 0)
-          .reduce((sum, acc) => sum + Math.abs(acc.balance || 0), 0) || 0;
+        const creditCardDebts = (allAccounts || [])
+          .filter((acc: any) => acc.account_type === 'credit_card' && acc.balance < 0)
+          .reduce((sum: number, acc: any) => sum + Math.abs(acc.balance || 0), 0);
 
         const liabilities = outstandingInvoices + creditCardDebts;
         const netWorthValue = assets - liabilities;

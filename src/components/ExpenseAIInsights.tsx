@@ -119,6 +119,8 @@ export default function ExpenseAIInsights({ selectedFilter, transactions, allTra
 
       // 2. Overspending vs Budget
       try {
+        if (!currentBusiness) return;
+        
         const { data: budgets } = await supabase
           .from('budgets')
           .select('*')
