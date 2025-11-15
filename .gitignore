@@ -1,4 +1,5 @@
-logs
+Enhancement:
+Add “smart time slider” (drag to zoom day→week→month), and cross-business filter toggles to switch instantly between entitilogs
 *.log
 npm-debug.log*
 yarn-debug.log*

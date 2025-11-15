@@ -1,3 +1,5 @@
+'use client'
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -8,6 +10,7 @@ interface Business {
   business_type: string;
   tax_id?: string | null;
   address?: any;
+  is_default: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -60,7 +63,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
       let current = null as Business | null;
 
       if (savedBusinessId) {
-        current = data?.find(b => b.id === savedBusinessId) || null;
+        current = data?.find((b: any) => b.id === savedBusinessId) || null;
       }
 
       if (!current && data && data.length > 0) {
@@ -117,7 +120,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     setCurrentBusinessState(business);
     localStorage.setItem('currentBusinessId', business.id);
 
-    supabase
+    (supabase as any)
       .from('businesses')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', business.id)

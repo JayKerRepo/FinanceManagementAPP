@@ -1,4 +1,7 @@
+'use client'
+
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   Home,
   Receipt,
@@ -258,18 +261,13 @@ export default function DemoPage() {
       {/* Demo Controls */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-[#1a1d2e]/95 backdrop-blur-xl border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a
+          <Link
             href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              window.history.pushState({}, '', '/');
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition" />
             <span className="font-medium">Back to Landing</span>
-          </a>
+          </Link>
 
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400 hidden sm:block">View Mode:</span>

@@ -1,3 +1,5 @@
+'use client'
+
 import { useState } from 'react';
 import { User, Building2, CheckCircle2, ArrowRight, ArrowLeft, Mic, Receipt, TrendingUp, Briefcase } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,9 +14,21 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // Get signup data from localStorage for pre-population
+  const getSignupData = () => {
+    try {
+      const stored = localStorage.getItem('signupData');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  };
+
+  const signupData = getSignupData();
+
   const [profileData, setProfileData] = useState({
-    full_name: profile?.full_name || '',
-    phone: '',
+    full_name: profile?.full_name || signupData?.fullName || '',
+    phone: signupData?.phone || '',
   });
 
   const [businessData, setBusinessData] = useState({
@@ -47,6 +61,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       });
 
       if (error) throw error;
+      
+      // Clear stored signup data after successful profile update
+      localStorage.removeItem('signupData');
+      
       setStep(3);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -64,7 +82,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     try {
       if (!user) throw new Error('No user found');
 
-      const { error: businessInsertError } = await supabase
+      const { error: businessInsertError } = await (supabase as any)
         .from('businesses')
         .insert({
           name: businessData.name,
@@ -98,8 +116,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           .toString()
           .padStart(4, '0')}`;
 
-      const { error: accountError } = await supabase.from('accounts').insert({
-        business_id: business.id,
+      const { error: accountError } = await (supabase as any).from('accounts').insert({
+        business_id: (business as any).id,
         name: 'Business Checking',
         account_type: 'checking',
         bank_name: 'Default Bank',

@@ -95,147 +95,106 @@ ALTER TABLE budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE receipts ENABLE ROW LEVEL SECURITY;
 
 -- Categories Policies
-CREATE POLICY "Users can view categories of their businesses or system categories"
+DROP POLICY IF EXISTS "Users can view categories of their businesses or system categories" ON categories;
+CREATE POLICY "Users can view categories of their businesses"
   ON categories FOR SELECT
   TO authenticated
   USING (
     is_system = true OR
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = categories.business_id
-      AND businesses.user_id = auth.uid()
-    )
+    business_id IS NULL OR
+    public.is_business_member(business_id)
   );
 
+DROP POLICY IF EXISTS "Users can create categories for their businesses" ON categories;
 CREATE POLICY "Users can create categories for their businesses"
   ON categories FOR INSERT
   TO authenticated
   WITH CHECK (
     business_id IS NULL OR
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = categories.business_id
-      AND businesses.user_id = auth.uid()
-    )
+    public.is_business_member(business_id)
   );
 
+DROP POLICY IF EXISTS "Users can update their own categories" ON categories;
 CREATE POLICY "Users can update their own categories"
   ON categories FOR UPDATE
   TO authenticated
   USING (
     is_system = false AND
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = categories.business_id
-      AND businesses.user_id = auth.uid()
-    )
+    (business_id IS NULL OR public.is_business_member(business_id))
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = categories.business_id
-      AND businesses.user_id = auth.uid()
-    )
+    business_id IS NULL OR public.is_business_member(business_id)
   );
 
+DROP POLICY IF EXISTS "Users can delete their own categories" ON categories;
 CREATE POLICY "Users can delete their own categories"
   ON categories FOR DELETE
   TO authenticated
   USING (
     is_system = false AND
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = categories.business_id
-      AND businesses.user_id = auth.uid()
-    )
+    (business_id IS NULL OR public.is_business_member(business_id))
   );
 
 -- Budgets Policies
+DROP POLICY IF EXISTS "Users can view budgets of their businesses" ON budgets;
 CREATE POLICY "Users can view budgets of their businesses"
   ON budgets FOR SELECT
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = budgets.business_id
-      AND businesses.user_id = auth.uid()
-    )
-  );
+  USING (public.is_business_member(business_id));
 
+DROP POLICY IF EXISTS "Users can create budgets for their businesses" ON budgets;
 CREATE POLICY "Users can create budgets for their businesses"
   ON budgets FOR INSERT
   TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = budgets.business_id
-      AND businesses.user_id = auth.uid()
-    )
-  );
+  WITH CHECK (public.is_business_member(business_id));
 
+DROP POLICY IF EXISTS "Users can update budgets of their businesses" ON budgets;
 CREATE POLICY "Users can update budgets of their businesses"
   ON budgets FOR UPDATE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = budgets.business_id
-      AND businesses.user_id = auth.uid()
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = budgets.business_id
-      AND businesses.user_id = auth.uid()
-    )
-  );
+  USING (public.is_business_member(business_id))
+  WITH CHECK (public.is_business_member(business_id));
 
+DROP POLICY IF EXISTS "Users can delete budgets of their businesses" ON budgets;
 CREATE POLICY "Users can delete budgets of their businesses"
   ON budgets FOR DELETE
   TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM businesses
-      WHERE businesses.id = budgets.business_id
-      AND businesses.user_id = auth.uid()
-    )
-  );
+  USING (public.is_business_member(business_id));
 
 -- Receipts Policies
+DROP POLICY IF EXISTS "Users can view receipts of their transactions" ON receipts;
 CREATE POLICY "Users can view receipts of their transactions"
   ON receipts FOR SELECT
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM transactions
-      JOIN businesses ON businesses.id = transactions.business_id
-      WHERE transactions.id = receipts.transaction_id
-      AND businesses.user_id = auth.uid()
+      SELECT 1 FROM public.transactions t
+      WHERE t.id = receipts.transaction_id
+        AND public.is_business_member(t.business_id)
     )
   );
 
+DROP POLICY IF EXISTS "Users can upload receipts to their transactions" ON receipts;
 CREATE POLICY "Users can upload receipts to their transactions"
   ON receipts FOR INSERT
   TO authenticated
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM transactions
-      JOIN businesses ON businesses.id = transactions.business_id
-      WHERE transactions.id = receipts.transaction_id
-      AND businesses.user_id = auth.uid()
+      SELECT 1 FROM public.transactions t
+      WHERE t.id = receipts.transaction_id
+        AND public.is_business_member(t.business_id)
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete receipts of their transactions" ON receipts;
 CREATE POLICY "Users can delete receipts of their transactions"
   ON receipts FOR DELETE
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM transactions
-      JOIN businesses ON businesses.id = transactions.business_id
-      WHERE transactions.id = receipts.transaction_id
-      AND businesses.user_id = auth.uid()
+      SELECT 1 FROM public.transactions t
+      WHERE t.id = receipts.transaction_id
+        AND public.is_business_member(t.business_id)
     )
   );
 
