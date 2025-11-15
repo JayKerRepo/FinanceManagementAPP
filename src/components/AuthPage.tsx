@@ -3,7 +3,7 @@ import { Mail, Lock, User, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthPage() {
-  const { signIn, signUp, resetPassword, resendVerification } = useAuth() as any;
+  const { signIn, signUp, resetPassword, resendVerification } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -14,6 +14,7 @@ export default function AuthPage() {
     email: '',
     password: '',
     fullName: '',
+    phone: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,6 +35,13 @@ export default function AuthPage() {
 
         const { error } = await signUp(formData.email.trim(), formData.password, formData.fullName.trim());
         if (error) throw error;
+        
+        // Store signup data in localStorage for onboarding pre-population
+        localStorage.setItem('signupData', JSON.stringify({
+          fullName: formData.fullName.trim(),
+          phone: formData?.phone || '',
+        }));
+        
         setInfo('Account created. Please check your email to verify your address before signing in.');
       }
   } catch (err: any) {

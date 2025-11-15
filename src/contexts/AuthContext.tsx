@@ -1,6 +1,9 @@
+'use client'
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { UserPreferences } from '../lib/database.types';
 
 interface Profile {
   id: string;
@@ -9,7 +12,7 @@ interface Profile {
   avatar_url: string | null;
   phone: string | null;
   onboarding_completed: boolean;
-  preferences: any;
+  preferences: UserPreferences;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +26,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
+  updatePreferences: (preferences: Partial<UserPreferences>) => Promise<{ error: Error | null }>;
   refreshProfile: () => Promise<void>;
   resetPassword?: (email: string) => Promise<{ error: Error | null }>;
   resendVerification?: (email: string) => Promise<{ error: Error | null }>;
@@ -125,13 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
-          // data: { full_name: fullName } // optional, if you want to carry through metadata
+          data: { full_name: fullName } // This will be stored in raw_user_meta_data
         },
       });
       if (signUpError) throw signUpError;
   
-      // Do not create profile here.
-      // After the user clicks the verification email and signs in, the DB trigger creates `profiles` (or we fetch then).
+      // Profile will be created automatically by the database trigger
       return { error: null };
     } catch (error) {
       console.error('Error signing up:', error);
@@ -169,7 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (!user) throw new Error('No user logged in');
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update(updates)
         .eq('id', user.id);
@@ -179,6 +182,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     } catch (error) {
       console.error('Error updating profile:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const updatePreferences = async (preferences: Partial<UserPreferences>) => {
+    try {
+      if (!user) throw new Error('No user logged in');
+
+      const { error } = await (supabase as any)
+        .from('profiles')
+        .update({ 
+          preferences: {
+            ...profile?.preferences,
+            ...preferences
+          }
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      await fetchProfile(user.id);
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating preferences:', error);
       return { error: error as Error };
     }
   };
@@ -218,6 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     updateProfile,
+    updatePreferences,
     refreshProfile,
     resetPassword,
     resendVerification,

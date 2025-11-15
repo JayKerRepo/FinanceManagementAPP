@@ -1,7 +1,12 @@
+'use client'
+
 import { Mic, Receipt, TrendingUp, Building2, Globe, Shield, Zap, CheckCircle, Play, ArrowRight, Camera } from 'lucide-react';
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -29,12 +34,12 @@ export default function LandingPage() {
 
           <div className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-gray-400 hover:text-white transition">Features</a>
-            <a href="/demo" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/demo'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="text-gray-400 hover:text-white transition">Demo</a>
+            <Link href="/demo" className="text-gray-400 hover:text-white transition">Demo</Link>
             <a href="#pricing" className="text-gray-400 hover:text-white transition">Pricing</a>
-            <button onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="text-gray-400 hover:text-white transition">Login</button>
-            <button onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }} className="bg-gradient-to-r from-[#10B981] to-[#059669] px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition">
+            <Link href="/auth" className="text-gray-400 hover:text-white transition">Login</Link>
+            <Link href="/auth" className="bg-gradient-to-r from-[#10B981] to-[#059669] px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition">
               Sign Up
-            </button>
+            </Link>
           </div>
         </nav>
       </header>
@@ -60,14 +65,14 @@ export default function LandingPage() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                  onClick={() => router.push('/auth')}
                   className="bg-gradient-to-r from-[#10B981] to-[#059669] px-8 py-4 rounded-xl font-semibold text-lg hover:opacity-90 transition shadow-lg shadow-green-500/30 flex items-center justify-center gap-2"
                 >
                   Start Your Smart Finance Journey
                   <ArrowRight className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => { window.history.pushState({}, '', '/demo'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+                  onClick={() => router.push('/demo')}
                   className="bg-[#1a2332] border border-white/10 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-[#252a41] transition flex items-center justify-center gap-2"
                 >
                   <Play className="w-5 h-5" />
@@ -407,14 +412,14 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => { window.history.pushState({}, '', '/app'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              onClick={() => router.push('/auth')}
               className="bg-gradient-to-r from-[#10B981] to-[#059669] px-10 py-5 rounded-xl font-semibold text-xl hover:opacity-90 transition shadow-lg shadow-green-500/30 inline-flex items-center justify-center gap-2"
             >
               Start Your Smart Finance Journey
               <ArrowRight className="w-6 h-6" />
             </button>
             <button
-              onClick={() => { window.history.pushState({}, '', '/demo'); window.dispatchEvent(new PopStateEvent('popstate')); }}
+              onClick={() => router.push('/demo')}
               className="bg-[#1a2332] border border-white/10 px-10 py-5 rounded-xl font-semibold text-xl hover:bg-[#252a41] transition inline-flex items-center justify-center gap-2 group"
             >
               <Play className="w-6 h-6 group-hover:scale-110 transition" />

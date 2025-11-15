@@ -1,3 +1,5 @@
+'use client'
+
 import { Mail, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';

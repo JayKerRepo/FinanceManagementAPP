@@ -6,6 +6,15 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export interface UserPreferences {
+  currency: string
+  language: string
+  timezone: string
+  defaultView: 'dashboard' | 'expenses' | 'reports'
+  defaultBusinessId: string | 'recent'
+  autoOpenExpenseEntry: boolean
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -47,39 +56,62 @@ export interface Database {
       businesses: {
         Row: {
           id: string
-          user_id: string
           name: string
           business_type: string
           tax_id: string | null
           address: Json
-          is_default: boolean
           settings: Json
+          is_default: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          user_id: string
           name: string
           business_type?: string
           tax_id?: string | null
           address?: Json
-          is_default?: boolean
           settings?: Json
+          is_default?: boolean
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
           name?: string
           business_type?: string
           tax_id?: string | null
           address?: Json
-          is_default?: boolean
           settings?: Json
+          is_default?: boolean
           created_at?: string
           updated_at?: string
+        }
+      }
+      business_members: {
+        Row: {
+          id: string
+          business_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'manager' | 'accountant' | 'employee' | 'viewer'
+          created_at: string
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'manager' | 'accountant' | 'employee' | 'viewer'
+          created_at?: string
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          user_id?: string
+          role?: 'owner' | 'admin' | 'manager' | 'accountant' | 'employee' | 'viewer'
+          created_at?: string
+          updated_at?: string | null
         }
       }
       accounts: {
@@ -131,6 +163,7 @@ export interface Database {
           id: string
           business_id: string
           account_id: string
+          user_id: string | null
           transaction_type: 'income' | 'expense' | 'transfer'
           amount: number
           currency: string
@@ -154,6 +187,7 @@ export interface Database {
           id?: string
           business_id: string
           account_id: string
+          user_id?: string | null
           transaction_type: 'income' | 'expense' | 'transfer'
           amount: number
           currency?: string
@@ -177,6 +211,7 @@ export interface Database {
           id?: string
           business_id?: string
           account_id?: string
+          user_id?: string | null
           transaction_type?: 'income' | 'expense' | 'transfer'
           amount?: number
           currency?: string
@@ -308,6 +343,206 @@ export interface Database {
           file_size?: number | null
           mime_type?: string | null
           metadata?: Json
+          created_at?: string
+        }
+      }
+      expense_approvals: {
+        Row: {
+          id: string
+          business_id: string
+          transaction_id: string
+          submitter_id: string
+          approver_id: string | null
+          status: 'pending' | 'approved' | 'rejected' | 'cancelled'
+          approval_level: number | null
+          total_levels: number | null
+          submitted_at: string
+          reviewed_at: string | null
+          comments: string | null
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          transaction_id: string
+          submitter_id: string
+          approver_id?: string | null
+          status?: 'pending' | 'approved' | 'rejected' | 'cancelled'
+          approval_level?: number | null
+          total_levels?: number | null
+          submitted_at?: string
+          reviewed_at?: string | null
+          comments?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          transaction_id?: string
+          submitter_id?: string
+          approver_id?: string | null
+          status?: 'pending' | 'approved' | 'rejected' | 'cancelled'
+          approval_level?: number | null
+          total_levels?: number | null
+          submitted_at?: string
+          reviewed_at?: string | null
+          comments?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      clients: {
+        Row: {
+          id: string
+          business_id: string
+          name: string
+          email: string | null
+          phone: string | null
+          address: Json
+          contact_person: string | null
+          tax_id: string | null
+          notes: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          name: string
+          email?: string | null
+          phone?: string | null
+          address?: Json
+          contact_person?: string | null
+          tax_id?: string | null
+          notes?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          name?: string
+          email?: string | null
+          phone?: string | null
+          address?: Json
+          contact_person?: string | null
+          tax_id?: string | null
+          notes?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      invoices: {
+        Row: {
+          id: string
+          business_id: string
+          client_id: string | null
+          invoice_number: string | null
+          status: string | null
+          issue_date: string | null
+          due_date: string | null
+          subtotal: number | null
+          tax_rate: number | null
+          tax_amount: number | null
+          discount: number | null
+          total_amount: number | null
+          paid_amount: number | null
+          currency: string | null
+          line_items: Json | null
+          notes: string | null
+          terms: string | null
+          is_recurring: boolean | null
+          recurring_config: Json | null
+          template_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          business_id: string
+          client_id?: string | null
+          invoice_number?: string | null
+          status?: string | null
+          issue_date?: string | null
+          due_date?: string | null
+          subtotal?: number | null
+          tax_rate?: number | null
+          tax_amount?: number | null
+          discount?: number | null
+          total_amount?: number | null
+          paid_amount?: number | null
+          currency?: string | null
+          line_items?: Json | null
+          notes?: string | null
+          terms?: string | null
+          is_recurring?: boolean | null
+          recurring_config?: Json | null
+          template_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string
+          client_id?: string | null
+          invoice_number?: string | null
+          status?: string | null
+          issue_date?: string | null
+          due_date?: string | null
+          subtotal?: number | null
+          tax_rate?: number | null
+          tax_amount?: number | null
+          discount?: number | null
+          total_amount?: number | null
+          paid_amount?: number | null
+          currency?: string | null
+          line_items?: Json | null
+          notes?: string | null
+          terms?: string | null
+          is_recurring?: boolean | null
+          recurring_config?: Json | null
+          template_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      invoice_payments: {
+        Row: {
+          id: string
+          invoice_id: string
+          payment_date: string
+          amount: number
+          payment_method: string
+          reference: string | null
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          invoice_id: string
+          payment_date?: string
+          amount: number
+          payment_method: string
+          reference?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          invoice_id?: string
+          payment_date?: string
+          amount?: number
+          payment_method?: string
+          reference?: string | null
+          notes?: string | null
           created_at?: string
         }
       }
