@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Upload, Camera, FileImage, Check, X, Loader } from 'lucide-react'
+import { Upload, Camera, FileImage, Check, X, Loader, AlertCircle } from 'lucide-react'
 import { useAIAssistant } from '../hooks/useAIAssistant'
 import { useAuth } from '../contexts/AuthContext'
 import { useBusiness } from '../contexts/BusinessContext'
@@ -13,12 +13,14 @@ interface ReceiptOCRUploaderProps {
   onExpenseExtracted?: (expense: any) => void
   businessId?: string
   className?: string
+  onError?: (error: Error, expenseData: any) => void
 }
 
 export default function ReceiptOCRUploader({ 
   onExpenseExtracted, 
   businessId,
-  className = '' 
+  className = '',
+  onError
 }: ReceiptOCRUploaderProps) {
   const { user } = useAuth()
   const { accounts } = useBusiness()
@@ -28,6 +30,7 @@ export default function ReceiptOCRUploader({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [extractedExpense, setExtractedExpense] = useState<any>(null)
   const [showConfirmation, setShowConfirmation] = useState(false)
+  const [priority, setPriority] = useState<'high' | 'normal' | 'low'>('normal')
 
   const { 
     isProcessing, 
@@ -113,7 +116,7 @@ export default function ReceiptOCRUploader({
       // Ensure account exists, create one if needed
       const defaultAccount = await getOrCreateDefaultAccount(supabase, businessId);
 
-      // Save expense via helper
+      // Save expense via helper (priority is stored in metadata by saveExpense)
       const transaction = await saveExpense({
         supabase,
         userId: user.id,
@@ -127,16 +130,33 @@ export default function ReceiptOCRUploader({
           receiptUrl: previewUrl || null,
           aiCategory: extractedExpense.category,
           aiConfidence: extractedExpense.confidence || 0.95,
+          priority: priority, // Priority will be stored in metadata by saveExpense
         },
       });
 
-      onExpenseExtracted?.(transaction);
-      clearFile();
-    } catch (error) {
-      console.error('Error saving OCR expense:', error);
+    onExpenseExtracted?.(transaction);
+    clearFile();
+  } catch (error) {
+    console.error('Error saving OCR expense:', error);
+    // Transfer to manual entry on error
+    if (onError) {
+      const expenseData = {
+        amount: extractedExpense.amount,
+        vendor: extractedExpense.vendor || extractedExpense.description,
+        category: extractedExpense.category,
+        business: businessId,
+        date: extractedExpense.date || new Date().toISOString().split('T')[0],
+        paymentMethod: 'credit_card',
+        notes: extractedExpense.description,
+        receiptUrl: previewUrl || undefined,
+        priority: priority
+      };
+      onError(error instanceof Error ? error : new Error('Failed to save expense'), expenseData);
+    } else {
       alert('Failed to save expense. Please try again.');
     }
-  }, [extractedExpense, user, businessId, accounts, onExpenseExtracted, previewUrl, clearFile])
+  }
+}, [extractedExpense, user, businessId, accounts, onExpenseExtracted, previewUrl, clearFile, priority, onError])
 
   const rejectExpense = useCallback(() => {
     setShowConfirmation(false)
@@ -266,6 +286,23 @@ export default function ReceiptOCRUploader({
                   <p><span className="text-gray-400">Vendor:</span> {extractedExpense.vendor}</p>
                 )}
                 <p><span className="text-gray-400">Confidence:</span> {Math.round(extractedExpense.confidence * 100)}%</p>
+              </div>
+              
+              {/* Priority Selector */}
+              <div className="mb-3 mt-3">
+                <label className="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3 text-cyan-400" />
+                  Priority (Optional)
+                </label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as 'high' | 'normal' | 'low')}
+                  className="w-full bg-[#0f1729] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-cyan-400 focus:outline-none"
+                >
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                </select>
               </div>
               
               <div className="flex gap-2 mt-3">

@@ -413,8 +413,8 @@ export default function LiveKPICards({ selectedBusinesses, timeRange, compareMod
               <card.icon className="w-5 h-5" style={{ color: card.color }} />
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-400 mb-1">{card.title}</p>
-              <animated.p className="text-lg font-bold text-white">
+              <p className="text-lg font-bold text-cyan-400 mb-1">{card.title}</p>
+              <animated.p className="text-4xl font-bold text-white">
                 {card.value.to((n) => `$${n.toFixed(0)}`)}
               </animated.p>
             </div>

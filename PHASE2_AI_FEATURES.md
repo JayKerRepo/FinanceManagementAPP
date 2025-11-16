@@ -18,7 +18,7 @@ Phase 2 focuses on implementing real AI-powered features for ExpenseIQ, includin
   - Error handling and validation
 
 #### Expense Extraction API (`/api/extract-expense`)
-- **Purpose**: Extract structured expense data from text using GPT-4
+- **Purpose**: Extract structured expense data from text using GPT-5 nano
 - **Input**: Text (from voice or OCR)
 - **Output**: Structured expense object
 - **Features**:
@@ -131,7 +131,7 @@ useAIAssistant Hook
     ↓
 Next.js API Routes
     ↓
-OpenAI APIs (Whisper, GPT-4, Vision)
+OpenAI APIs (Whisper, GPT-5 nano, Vision)
     ↓
 Structured Response
 ```
@@ -139,7 +139,7 @@ Structured Response
 ### Key Technologies
 
 - **OpenAI Whisper**: Speech-to-text transcription
-- **OpenAI GPT-4**: Natural language processing and expense extraction
+- **OpenAI GPT-5 nano**: Natural language processing and expense extraction (fastest, cheapest)
 - **OpenAI Vision**: Image OCR and receipt processing
 - **MediaRecorder API**: Browser-based audio recording
 - **Next.js API Routes**: Server-side AI processing

@@ -39,16 +39,35 @@ export default function HeatmapCalendar({ selectedBusinesses, timeRange, compare
 
     const fetchHeatmapData = async () => {
       try {
-        // Get last 90 days
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        // Use timeRange prop if provided, otherwise default to 90 days
+        let startDate: Date;
+        let endDate = new Date();
+        let daysToShow = 90;
+        
+        if (timeRange) {
+          startDate = new Date(timeRange.start);
+          endDate = new Date(timeRange.end);
+          daysToShow = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+        } else {
+          startDate = new Date();
+          startDate.setDate(startDate.getDate() - 90);
+        }
 
-        const { data: transactions } = await supabase
+        let query = supabase
           .from('transactions')
           .select('date, amount')
-          .eq('business_id', currentBusiness.id)
           .eq('transaction_type', 'expense')
-          .gte('date', ninetyDaysAgo.toISOString().split('T')[0]);
+          .gte('date', startDate.toISOString().split('T')[0])
+          .lte('date', endDate.toISOString().split('T')[0]);
+
+        // Handle selectedBusinesses if provided
+        if (selectedBusinesses && selectedBusinesses.length > 0) {
+          query = query.in('business_id', selectedBusinesses);
+        } else {
+          query = query.eq('business_id', currentBusiness.id);
+        }
+
+        const { data: transactions } = await query;
 
         if (transactions) {
           // Group by date and calculate daily totals
@@ -76,15 +95,16 @@ export default function HeatmapCalendar({ selectedBusinesses, timeRange, compare
     };
 
     fetchHeatmapData();
-  }, [currentBusiness]);
+  }, [currentBusiness, timeRange, selectedBusinesses]);
 
   const getIntensityColor = (intensity: number) => {
+    // Sunset yellow/orange gradient colors
     const colors = [
-      '#374151', // 0 - no activity
-      '#4F7CFF', // 1 - low
-      '#3B82F6', // 2 - medium-low
-      '#2563EB', // 3 - medium-high
-      '#1D4ED8', // 4 - high
+      '#374151', // 0 - no activity (gray)
+      '#FCD34D', // 1 - low (Light Sunset Yellow)
+      '#FB923C', // 2 - medium-low (Medium Sunset Orange)
+      '#EA580C', // 3 - medium-high (Medium-Dark Sunset Orange)
+      '#B91C1C', // 4 - high (Bright Dark Sunset Orange)
     ];
     return colors[intensity] || colors[0];
   };
@@ -102,14 +122,26 @@ export default function HeatmapCalendar({ selectedBusinesses, timeRange, compare
     return date.getDay(); // 0 = Sunday, 1 = Monday, etc.
   };
 
-  // Generate calendar grid for last 90 days
+  // Generate calendar grid based on timeRange
   const generateCalendarGrid = () => {
     const grid = [];
     const today = new Date();
     
-    for (let i = 89; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
+    // Calculate days to show based on timeRange or default to 90
+    let daysToShow = 90;
+    let startDate = new Date();
+    if (timeRange) {
+      startDate = new Date(timeRange.start);
+      const endDate = new Date(timeRange.end);
+      daysToShow = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    } else {
+      startDate.setDate(startDate.getDate() - 90);
+    }
+    
+    // Generate grid for the calculated range
+    for (let i = daysToShow - 1; i >= 0; i--) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
       const dateString = date.toISOString().split('T')[0];
       
       const dayData = heatmapData.find(d => d.date === dateString);
@@ -121,7 +153,7 @@ export default function HeatmapCalendar({ selectedBusinesses, timeRange, compare
         intensity,
         amount,
         dayOfWeek: getDayOfWeek(dateString),
-        isToday: i === 0
+        isToday: dateString === today.toISOString().split('T')[0]
       });
     }
     
@@ -135,7 +167,7 @@ export default function HeatmapCalendar({ selectedBusinesses, timeRange, compare
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Spending Heatmap</h3>
         <div className="text-sm text-gray-400">
-          Last 90 days
+          {timeRange ? timeRange.label : 'Last 90 days'}
         </div>
       </div>
       

@@ -15,6 +15,28 @@ export default function InboxPage() {
     }
   }, [user]);
 
+  // Listen for expense additions to refresh inbox immediately
+  useEffect(() => {
+    const handleExpenseAdded = () => {
+      fetchApprovals();
+    };
+
+    // Listen for custom event when expense is added
+    window.addEventListener('expenseAdded', handleExpenseAdded);
+    
+    // Also poll for updates every 5 seconds as a fallback
+    const pollInterval = setInterval(() => {
+      if (user) {
+        fetchApprovals();
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('expenseAdded', handleExpenseAdded);
+      clearInterval(pollInterval);
+    };
+  }, [user]);
+
   const handleApproval = async (approvalId: string, action: 'approved' | 'rejected') => {
     try {
       if (!user) {
@@ -160,7 +182,7 @@ export default function InboxPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="font-bold text-lg">{submitter?.full_name || 'Unknown User'}</h3>
-                      {getPriorityBadge('normal')}
+                      {getPriorityBadge((approval.metadata as any)?.priority || approval.priority || 'normal')}
                       {transaction?.receipt_url && (
                         <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400">
                           <Receipt className="w-3 h-3" />
@@ -267,7 +289,7 @@ export default function InboxPage() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Priority</p>
-                      {getPriorityBadge(approval.priority || 'normal')}
+                      {getPriorityBadge((approval.metadata as any)?.priority || approval.priority || 'normal')}
                     </div>
                   </div>
 

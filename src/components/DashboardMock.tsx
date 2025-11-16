@@ -39,6 +39,7 @@ import { useRouter } from 'next/navigation';
 import { useBusiness } from '../contexts/BusinessContext';
 import BusinessSwitcher from './BusinessSwitcher';
 import AccountsPage from './AccountsPage';
+import { ErrorBoundary } from './ErrorBoundary';
 import BudgetsPage from './BudgetsPage';
 import ReportsTabs from './reports/ReportsTabs';
 import ExpenseEntryHub from './ExpenseEntryHub';
@@ -71,7 +72,7 @@ export default function DashboardMock() {
   const [chatMessage, setChatMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(4);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [expenseEntryMode, setExpenseEntryMode] = useState<'voice' | 'chat' | 'ocr' | 'manual'>('voice');
   const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>([]);
   const [compareMode, setCompareMode] = useState(false);
@@ -102,6 +103,43 @@ export default function DashboardMock() {
       if (preferences.autoOpenExpenseEntry) {
         setShowVoiceModal(true);
       }
+    }
+  }, [profile]);
+
+  // Fetch pending approvals count for INBOX badge
+  useEffect(() => {
+    const fetchPendingApprovalsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('expense_approvals')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        
+        if (!error && count !== null) {
+          setUnreadNotifications(count);
+        }
+      } catch (error) {
+        console.error('Error fetching pending approvals count:', error);
+      }
+    };
+
+    if (profile) {
+      fetchPendingApprovalsCount();
+      
+      // Listen for expense additions to refresh count
+      const handleExpenseAdded = () => {
+        fetchPendingApprovalsCount();
+      };
+      
+      window.addEventListener('expenseAdded', handleExpenseAdded);
+      
+      // Poll every 10 seconds as fallback
+      const pollInterval = setInterval(fetchPendingApprovalsCount, 10000);
+      
+      return () => {
+        window.removeEventListener('expenseAdded', handleExpenseAdded);
+        clearInterval(pollInterval);
+      };
     }
   }, [profile]);
 
@@ -530,7 +568,24 @@ export default function DashboardMock() {
           </div>
         </header>
 
-        {activePage === 'expenses' && <AccountsPage />}
+        {activePage === 'expenses' && (
+          <ErrorBoundary fallback={
+            <div className="p-6">
+              <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-red-400 mb-2">Error Loading Expense Manager</h3>
+                <p className="text-gray-300 mb-4">An unexpected error occurred. Please try refreshing the page or contact support if the issue persists.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl font-semibold transition"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          }>
+            <AccountsPage />
+          </ErrorBoundary>
+        )}
         {activePage === 'categories' && <CategoryManagement />}
         {activePage === 'reports' && <ReportsTabs businessId={currentBusiness?.id} timeRange={30} currentBusiness={currentBusiness} />}
         {activePage === 'inbox' && <InboxPage />}
@@ -543,16 +598,16 @@ export default function DashboardMock() {
 
         {activePage === 'dashboard' && (
         <div className="p-6">
-          {/* Welcome message for new users */}
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20">
-            <h2 className="text-lg font-semibold mb-2">Welcome to your Dashboard!</h2>
-            <p className="text-gray-400 text-sm">
+          {/* Welcome message */}
+          <div className="mb-6 p-3 sm:p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20 overflow-x-hidden">
+            <h2 className="text-base font-semibold mb-2">Welcome to your Dashboard!</h2>
+            <p className="text-xs sm:text-sm text-gray-400">
               Use the + button below to add expenses, or explore your business insights.
             </p>
           </div>
           
-          {/* Financial Overview - Revenue & Net Worth */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          {/* Financial Overview - Revenue, Net Worth & AI Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {/* Revenue Card */}
             <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-green-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
               <div className="flex items-center justify-between mb-4">
@@ -614,6 +669,15 @@ export default function DashboardMock() {
                 </div>
               </div>
             </div>
+
+            {/* AI Insights Card */}
+            <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-blue-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+              <AIInsightCard 
+                selectedBusinesses={selectedBusinesses}
+                timeRange={timeRange}
+                compareMode={compareMode}
+              />
+            </div>
           </div>
           
           {/* Live KPI Cards */}
@@ -623,7 +687,14 @@ export default function DashboardMock() {
             compareMode={compareMode}
           />
 
-          {/* Controls Row */}
+          {/* Compact Charts Grid */}
+          <CompactCharts 
+            selectedBusinesses={selectedBusinesses}
+            timeRange={timeRange}
+            compareMode={compareMode}
+          />
+
+          {/* Controls Row - Time Range and Business Filter above Heatmap */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2">
               <SmartTimeSlider 
@@ -641,13 +712,6 @@ export default function DashboardMock() {
             </div>
           </div>
 
-          {/* Compact Charts Grid */}
-          <CompactCharts 
-            selectedBusinesses={selectedBusinesses}
-            timeRange={timeRange}
-            compareMode={compareMode}
-          />
-
           {/* Bottom Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
@@ -657,13 +721,8 @@ export default function DashboardMock() {
                 compareMode={compareMode}
               />
             </div>
-            <div className="space-y-6">
+            <div>
               <LivePLBadge 
-                selectedBusinesses={selectedBusinesses}
-                timeRange={timeRange}
-                compareMode={compareMode}
-              />
-              <AIInsightCard 
                 selectedBusinesses={selectedBusinesses}
                 timeRange={timeRange}
                 compareMode={compareMode}

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import { NextRequest, NextResponse } from 'next/server'
+import { tokenOptimizer } from '../../../src/services/TokenOptimizer'
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,63 +47,75 @@ export async function POST(request: NextRequest) {
     const imageBuffer = await imageFile.arrayBuffer()
     const imageBase64 = Buffer.from(imageBuffer).toString('base64')
     
-    // Call OpenAI Vision API for OCR
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'user',
-            content: [
+    // Call OpenAI Vision API for OCR with smart model selection and fallback
+    let ocrResult
+    try {
+      ocrResult = await tokenOptimizer.callWithModelFallback('vision', async (model) => {
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
               {
-                type: 'text',
-                text: `Extract all text from this receipt image. Focus on:
-                - Vendor/merchant name
-                - Date
-                - Items purchased with prices
-                - Total amount
-                - Tax amount
-                - Any other relevant information
-                
-                Return the extracted text in a structured format.`
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${imageBase64}`
-                }
+                role: 'user',
+                content: [
+                  {
+                    type: 'text',
+                    text: `Extract all text from this receipt image. Focus on:
+                    - Vendor/merchant name
+                    - Date
+                    - Items purchased with prices
+                    - Total amount
+                    - Tax amount
+                    - Any other relevant information
+                    
+                    Return the extracted text in a structured format.`
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: `data:image/jpeg;base64,${imageBase64}`
+                    }
+                  }
+                ]
               }
-            ]
-          }
-        ],
-        max_tokens: 1000
-      })
-    })
+            ],
+            max_tokens: 1000
+          })
+        })
 
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.json()
+        if (!openaiResponse.ok) {
+          const errorData = await openaiResponse.json()
+          // Throw error to trigger fallback to next model
+          throw new Error(JSON.stringify(errorData))
+        }
+
+        return await openaiResponse.json()
+      })
+    } catch (error: any) {
+      const errorData = error?.message ? JSON.parse(error.message) : error
       console.error('OpenAI Vision API error:', errorData)
       
       // Handle specific error types
-      if (openaiResponse.status === 429) {
+      if (errorData?.error?.code === 'model_not_found' || errorData?.code === 'model_not_found') {
+        // This should have been handled by fallback, but if all models failed:
+        return NextResponse.json(
+          { error: 'OCR service unavailable. Please try again later.' },
+          { status: 503 }
+        )
+      } else if (errorData?.error?.type === 'rate_limit_error' || errorData?.type === 'rate_limit_error') {
         return NextResponse.json(
           { error: 'OCR service is busy. Please try again in a moment.' },
           { status: 429 }
         )
-      } else if (openaiResponse.status === 401) {
+      } else if (errorData?.error?.code === 'invalid_api_key' || errorData?.code === 'invalid_api_key') {
         return NextResponse.json(
           { error: 'OCR service authentication failed. Please contact support.' },
           { status: 500 }
-        )
-      } else if (openaiResponse.status === 400) {
-        return NextResponse.json(
-          { error: 'Invalid image format. Please ensure the image is clear and readable.' },
-          { status: 400 }
         )
       } else {
         return NextResponse.json(
@@ -111,8 +124,6 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-
-    const ocrResult = await openaiResponse.json()
     const extractedText = ocrResult.choices[0]?.message?.content
 
     if (!extractedText) {

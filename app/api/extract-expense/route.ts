@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import { NextRequest, NextResponse } from 'next/server'
+import { tokenOptimizer } from '../../../src/services/TokenOptimizer'
 
 interface ExpenseExtractionRequest {
   text: string
@@ -9,6 +10,9 @@ interface ExpenseExtractionRequest {
   context?: {
     previousExpenses?: any[]
     userPreferences?: any
+    conversationHistory?: Array<{ role: string; content: string }>
+    collectedData?: Record<string, any>
+    currentIntent?: string
   }
 }
 
@@ -23,50 +27,73 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create a structured prompt for expense extraction
+    // Create a structured prompt for expense extraction with context awareness
     const systemPrompt = `You are an AI assistant that extracts expense information from voice or text input. 
     Extract the following information and return it as JSON:
     - amount: number (required)
     - description: string (required)
-    - category: string (one of: food, travel, office, marketing, supplies, utilities, other)
-    - business: string (if mentioned, otherwise use "General")
+    - category: string (one of: Office & Admin, Marketing, Travel & Meals, Software, Equipment, Utilities, Professional Services, Other)
+    - business: string (if mentioned, otherwise use context or "General")
     - date: string (ISO format, default to today if not mentioned)
     - vendor: string (if mentioned)
     - confidence: number (0-1, how confident you are in the extraction)
     
+    Use conversation context to fill in missing information. If user is correcting previous data, update accordingly.
     If any required information is missing or unclear, set confidence to a lower value and make your best guess.
     Return only valid JSON, no other text.`
 
-    const userPrompt = `Extract expense information from: "${text}"`
+    // Build user prompt with context
+    let userPrompt = `Extract expense information from: "${text}"`
+    
+    if (context?.conversationHistory && context.conversationHistory.length > 0) {
+      userPrompt += `\n\nRecent conversation context:\n${context.conversationHistory.slice(-3).map(m => `${m.role}: ${m.content}`).join('\n')}`
+    }
+    
+    if (context?.collectedData && Object.keys(context.collectedData).length > 0) {
+      userPrompt += `\n\nPreviously collected data: ${JSON.stringify(context.collectedData)}`
+    }
+    
+    if (context?.userPreferences) {
+      userPrompt += `\n\nUser preferences: ${JSON.stringify(context.userPreferences)}`
+    }
 
-    // Call OpenAI GPT API for expense extraction
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.1,
-        max_tokens: 500
+    // Call OpenAI GPT API for expense extraction with smart model selection and fallback
+    let completion
+    try {
+      completion = await tokenOptimizer.callWithModelFallback('extraction', async (model) => {
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.1,
+            max_tokens: 500
+          })
+        })
+
+        if (!openaiResponse.ok) {
+          const errorData = await openaiResponse.json()
+          // Throw error to trigger fallback to next model
+          throw new Error(JSON.stringify(errorData))
+        }
+
+        return await openaiResponse.json()
       })
-    })
-
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.json()
+    } catch (error: any) {
+      const errorData = error?.message ? JSON.parse(error.message) : error
       console.error('OpenAI API error:', errorData)
       return NextResponse.json(
         { error: 'Expense extraction failed' },
         { status: 500 }
       )
     }
-
-    const completion = await openaiResponse.json()
     const extractedText = completion.choices[0]?.message?.content
 
     if (!extractedText) {

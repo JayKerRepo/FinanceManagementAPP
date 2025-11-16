@@ -18,6 +18,12 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
+import { 
+  Car, Plane, Building2, Camera, Utensils, Coffee, Wine, 
+  Laptop, Code, Zap, Briefcase, Package, Wrench, Settings, 
+  GraduationCap, ShoppingCart, DollarSign, TrendingUp, Users, 
+  Wallet, Factory, Megaphone, FileText, Wifi, BookOpen
+} from 'lucide-react';
 import { useBusiness } from '../../contexts/BusinessContext';
 import { supabase } from '../../lib/supabase';
 
@@ -46,6 +52,62 @@ interface Props {
   currentBusiness: any;
 }
 
+// Category to icon mapping function (same as MonthlyReport)
+const getCategoryIcon = (category: string) => {
+  const categoryLower = category.toLowerCase();
+  
+  if (categoryLower.includes('transport') || categoryLower.includes('travel') || categoryLower.includes('travel & meals')) {
+    return Car;
+  }
+  if (categoryLower.includes('lodging') || categoryLower.includes('hotel') || categoryLower.includes('accommodation')) {
+    return Building2;
+  }
+  if (categoryLower.includes('activit') || categoryLower.includes('entertainment')) {
+    return Camera;
+  }
+  if (categoryLower.includes('food') || categoryLower.includes('meal') || categoryLower.includes('drink') || categoryLower.includes('restaurant')) {
+    return Utensils;
+  }
+  if (categoryLower.includes('office') || categoryLower.includes('admin')) {
+    return FileText;
+  }
+  if (categoryLower.includes('marketing') || categoryLower.includes('advertising') || categoryLower.includes('ads')) {
+    return Megaphone;
+  }
+  if (categoryLower.includes('software') || categoryLower.includes('technology') || categoryLower.includes('saas') || categoryLower.includes('tech')) {
+    return Laptop;
+  }
+  if (categoryLower.includes('utilit')) {
+    return Zap;
+  }
+  if (categoryLower.includes('professional') || categoryLower.includes('service') || categoryLower.includes('consulting')) {
+    return Briefcase;
+  }
+  if (categoryLower.includes('equipment')) {
+    return Package;
+  }
+  if (categoryLower.includes('maintain') || categoryLower.includes('repair')) {
+    return Wrench;
+  }
+  if (categoryLower.includes('training') || categoryLower.includes('education')) {
+    return GraduationCap;
+  }
+  if (categoryLower.includes('material') || categoryLower.includes('procurement') || categoryLower.includes('supplies')) {
+    return ShoppingCart;
+  }
+  if (categoryLower.includes('investment') || categoryLower.includes('capital')) {
+    return TrendingUp;
+  }
+  if (categoryLower.includes('salary') || categoryLower.includes('employee') || categoryLower.includes('payroll')) {
+    return Users;
+  }
+  if (categoryLower.includes('factory') || categoryLower.includes('rent') || categoryLower.includes('lease')) {
+    return Factory;
+  }
+  
+  return DollarSign;
+};
+
 export default function AnnualReport({ businessId, timeRange, currentBusiness }: Props) {
   const [annualData, setAnnualData] = useState<AnnualData[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
@@ -68,11 +130,13 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
           .lte('date', endDate.toISOString().split('T')[0])
           .order('date', { ascending: true });
 
+        // Handle "all businesses" mode
         if (businessId) {
           query = query.eq('business_id', businessId);
         } else if (currentBusiness?.id) {
           query = query.eq('business_id', currentBusiness.id);
         }
+        // If both are null, fetch from all businesses (no filter)
 
         const { data: transactions } = await query;
 
@@ -153,9 +217,16 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
             .slice(0, 8); // Top 8 categories
 
           setCategoryData(categoryArray);
+        } else {
+          // Ensure categoryData is always an array, even if no transactions exist
+          setCategoryData([]);
         }
       } catch (error) {
         console.error('Error fetching annual data:', error);
+        // Ensure categoryData is always an array on error
+        setCategoryData([]);
+        setAnnualData([]);
+        setMonthlyData([]);
       } finally {
         setLoading(false);
       }
@@ -164,20 +235,145 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
     fetchAnnualData();
   }, [businessId, timeRange, currentBusiness]);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // Tooltip for BarChart (Year-over-Year Comparison)
+  const BarChartTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-[#1a1d2e] border border-white/10 rounded-lg p-3 shadow-lg">
           <p className="text-white font-semibold mb-2">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {entry.name}: ${entry.value.toFixed(2)}
+              {entry.name}: ${entry.value?.toFixed(2) || '0.00'}
             </p>
           ))}
         </div>
       );
     }
     return null;
+  };
+
+  // Tooltip for AreaChart (Monthly Trend)
+  const AreaChartTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#1a1d2e] border border-white/10 rounded-lg p-3 shadow-lg">
+          <p className="text-white font-semibold mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              {entry.name}: ${entry.value?.toFixed(2) || '0.00'}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Tooltip for LineChart (Annual Net Profit Trend)
+  const LineChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      if (!data) return null;
+      return (
+        <div className="bg-[#1a1d2e] border border-white/10 rounded-lg p-3 shadow-lg">
+          <p className="text-white font-semibold mb-2">{data.year}</p>
+          <p className="text-sm text-green-400">
+            Net Profit: ${data.net?.toFixed(2) || '0.00'}
+          </p>
+          <p className="text-sm text-blue-400">
+            Income: ${data.income?.toFixed(2) || '0.00'}
+          </p>
+          <p className="text-sm text-red-400">
+            Expense: ${data.expense?.toFixed(2) || '0.00'}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Tooltip for PieChart (Category Breakdown)
+  const PieChartTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      // Add null/empty checks for categoryData before accessing it
+      if (!data || !categoryData || categoryData.length === 0) return null;
+      const total = categoryData.reduce((sum, cat) => sum + cat.amount, 0);
+      const percentage = total > 0 ? ((data.amount / total) * 100).toFixed(1) : '0';
+      return (
+        <div className="bg-[#1a1d2e] border border-white/10 rounded-lg p-3 shadow-lg">
+          <p className="text-white font-semibold mb-2">{data.category}</p>
+          <p className="text-sm text-blue-400">
+            Amount: ${data.amount.toFixed(2)}
+          </p>
+          <p className="text-sm text-gray-400">
+            Percentage: {percentage}%
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    if (!categoryData || categoryData.length === 0 || index < 0 || index >= categoryData.length) return null;
+    
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const data = categoryData[index];
+    if (!data) return null;
+    
+    const total = categoryData.reduce((sum, cat) => sum + cat.amount, 0);
+    const percentage = total > 0 ? ((data.amount / total) * 100).toFixed(0) : '0';
+
+    if (percent < 0.05) return null;
+
+    const IconComponent = getCategoryIcon(data.category);
+
+    return (
+      <g>
+        <foreignObject x={x - 20} y={y - 25} width="40" height="50">
+          <div className="flex flex-col items-center justify-center text-center">
+            <IconComponent className="w-5 h-5 text-white mb-1" />
+            <span className="text-xs font-semibold text-white" style={{ fontSize: '10px' }}>
+              {percentage}%
+            </span>
+          </div>
+        </foreignObject>
+      </g>
+    );
+  };
+
+  const CustomLegend = ({ payload }: any) => {
+    if (!categoryData || categoryData.length === 0 || !payload) return null;
+    
+    const total = categoryData.reduce((sum, cat) => sum + cat.amount, 0);
+    return (
+      <div className="flex flex-wrap justify-center gap-4 mt-4">
+        {payload.map((entry: any, index: number) => {
+          const data = categoryData[index];
+          if (!data) return null;
+          const percentage = total > 0 ? ((data.amount / total) * 100).toFixed(1) : '0';
+          const IconComponent = getCategoryIcon(data.category);
+          
+          return (
+            <div key={index} className="flex items-center gap-2 bg-[#0f1729]/50 px-3 py-2 rounded-lg border border-white/10">
+              <div 
+                className="w-4 h-4 rounded-full" 
+                style={{ backgroundColor: entry.color }}
+              />
+              <IconComponent className="w-4 h-4 text-white" />
+              <span className="text-sm text-gray-300 font-medium">{data.category}</span>
+              <span className="text-xs text-gray-400">
+                ${data.amount.toFixed(0)} ({percentage}%)
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   if (loading) {
@@ -193,14 +389,19 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
     <div className="space-y-6">
       {/* Year-over-Year Comparison */}
       <div className="bg-[#1a1d2e] rounded-2xl p-6 border border-white/5">
-        <h2 className="text-xl font-semibold mb-4">Year-over-Year Comparison</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Year-over-Year Comparison
+          {!businessId && !currentBusiness?.id && (
+            <span className="text-sm text-gray-400 ml-2 font-normal">(All Businesses)</span>
+          )}
+        </h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={annualData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="year" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" tickFormatter={(value) => `$${value}`} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<BarChartTooltip />} />
               <Legend />
               <Bar dataKey="income" fill="#4F7CFF" name="Income" radius={[4, 4, 0, 0]} />
               <Bar dataKey="expense" fill="#ef4444" name="Expense" radius={[4, 4, 0, 0]} />
@@ -212,7 +413,12 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
       {/* Monthly Trend (Last 12 Months) */}
       {monthlyData.length > 0 && (
         <div className="bg-[#1a1d2e] rounded-2xl p-6 border border-white/5">
-          <h2 className="text-xl font-semibold mb-4">Monthly Trend (Last 12 Months)</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Monthly Trend (Last 12 Months)
+            {!businessId && !currentBusiness?.id && (
+              <span className="text-sm text-gray-400 ml-2 font-normal">(All Businesses)</span>
+            )}
+          </h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyData}>
@@ -229,7 +435,7 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="month" stroke="#9ca3af" />
                 <YAxis stroke="#9ca3af" tickFormatter={(value) => `$${value}`} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<AreaChartTooltip />} />
                 <Legend />
                 <Area
                   type="monotone"
@@ -255,14 +461,19 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
 
       {/* Net Profit Trend */}
       <div className="bg-[#1a1d2e] rounded-2xl p-6 border border-white/5">
-        <h2 className="text-xl font-semibold mb-4">Annual Net Profit Trend</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          Annual Net Profit Trend
+          {!businessId && !currentBusiness?.id && (
+            <span className="text-sm text-gray-400 ml-2 font-normal">(All Businesses)</span>
+          )}
+        </h2>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={annualData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis dataKey="year" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" tickFormatter={(value) => `$${value}`} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<LineChartTooltip />} />
               <Line 
                 type="monotone" 
                 dataKey="net" 
@@ -279,8 +490,13 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
       {/* Category Breakdown */}
       {categoryData.length > 0 && (
         <div className="bg-[#1a1d2e] rounded-2xl p-6 border border-white/5">
-          <h2 className="text-xl font-semibold mb-4">Top Categories (Last 3 Years)</h2>
-          <div className="h-80">
+          <h2 className="text-xl font-semibold mb-4">
+            Top Categories (Last 3 Years)
+            {!businessId && !currentBusiness?.id && (
+              <span className="text-sm text-gray-400 ml-2 font-normal">(All Businesses)</span>
+            )}
+          </h2>
+          <div className="h-80" style={{ transform: 'perspective(1000px) rotateX(5deg)' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -291,20 +507,22 @@ export default function AnnualReport({ businessId, timeRange, currentBusiness }:
                   outerRadius={120}
                   paddingAngle={2}
                   dataKey="amount"
+                  label={categoryData.length > 0 ? CustomLabel : undefined}
+                  labelLine={false}
                 >
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                <Tooltip content={<PieChartTooltip />} />
+                <Legend content={categoryData.length > 0 ? <CustomLegend /> : undefined} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       )}
 
-      {/* Summary Stats */}
+      {/* Summary Stats - Moved to just below Category Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-[#1a1d2e] rounded-2xl p-6 border border-white/5">
           <h3 className="text-lg font-semibold mb-2">Total Income</h3>

@@ -27,7 +27,7 @@ export default function CrossBusinessFilter({
 }: CrossBusinessFilterProps) {
   const { businesses } = useBusiness();
   const [businessFilters, setBusinessFilters] = useState<BusinessFilter[]>([]);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true); // Show all businesses by default
 
   // Color palette for businesses
   const businessColors = [

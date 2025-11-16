@@ -19,7 +19,12 @@ import {
 } from 'recharts';
 import { useBusiness } from '../../contexts/BusinessContext';
 import { supabase } from '../../lib/supabase';
-import { Eye, TrendingUp, AlertTriangle } from 'lucide-react';
+import { 
+  Eye, TrendingUp, AlertTriangle, Car, Plane, Building2, Camera, 
+  Utensils, Coffee, Wine, Laptop, Code, Zap, Briefcase, Package, 
+  Wrench, Settings, GraduationCap, ShoppingCart, DollarSign, Users, 
+  Wallet, Factory, Megaphone, FileText, Wifi, BookOpen
+} from 'lucide-react';
 import { TimeRange } from './SmartTimeSlider';
 
 interface ChartData {
@@ -41,6 +46,62 @@ interface CompactChartsProps {
   timeRange?: TimeRange;
   compareMode?: boolean;
 }
+
+// Category to icon mapping function
+const getCategoryIcon = (category: string) => {
+  const categoryLower = category.toLowerCase();
+  
+  if (categoryLower.includes('transport') || categoryLower.includes('travel') || categoryLower.includes('travel & meals')) {
+    return Car;
+  }
+  if (categoryLower.includes('lodging') || categoryLower.includes('hotel') || categoryLower.includes('accommodation')) {
+    return Building2;
+  }
+  if (categoryLower.includes('activit') || categoryLower.includes('entertainment')) {
+    return Camera;
+  }
+  if (categoryLower.includes('food') || categoryLower.includes('meal') || categoryLower.includes('drink') || categoryLower.includes('restaurant')) {
+    return Utensils;
+  }
+  if (categoryLower.includes('office') || categoryLower.includes('admin')) {
+    return FileText;
+  }
+  if (categoryLower.includes('marketing') || categoryLower.includes('advertising') || categoryLower.includes('ads')) {
+    return Megaphone;
+  }
+  if (categoryLower.includes('software') || categoryLower.includes('technology') || categoryLower.includes('saas') || categoryLower.includes('tech')) {
+    return Laptop;
+  }
+  if (categoryLower.includes('utilit')) {
+    return Zap;
+  }
+  if (categoryLower.includes('professional') || categoryLower.includes('service') || categoryLower.includes('consulting')) {
+    return Briefcase;
+  }
+  if (categoryLower.includes('equipment')) {
+    return Package;
+  }
+  if (categoryLower.includes('maintain') || categoryLower.includes('repair')) {
+    return Wrench;
+  }
+  if (categoryLower.includes('training') || categoryLower.includes('education')) {
+    return GraduationCap;
+  }
+  if (categoryLower.includes('material') || categoryLower.includes('procurement') || categoryLower.includes('supplies')) {
+    return ShoppingCart;
+  }
+  if (categoryLower.includes('investment') || categoryLower.includes('capital')) {
+    return TrendingUp;
+  }
+  if (categoryLower.includes('salary') || categoryLower.includes('employee') || categoryLower.includes('payroll')) {
+    return Users;
+  }
+  if (categoryLower.includes('factory') || categoryLower.includes('rent') || categoryLower.includes('lease')) {
+    return Factory;
+  }
+  
+  return DollarSign;
+};
 
 export default function CompactCharts({ selectedBusinesses, timeRange, compareMode }: CompactChartsProps) {
   const { currentBusiness } = useBusiness();
@@ -226,7 +287,7 @@ export default function CompactCharts({ selectedBusinesses, timeRange, compareMo
           <Eye className="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors" />
         </div>
         
-        <div className="h-24 mb-3">
+        <div className="h-24 mb-3" style={{ transform: 'perspective(1000px) rotateX(5deg)' }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -253,18 +314,25 @@ export default function CompactCharts({ selectedBusinesses, timeRange, compareMo
         </div>
 
         <div className="space-y-1">
-          {categoryData.slice(0, 3).map((category, index) => (
-            <div key={index} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: category.color }}
-                />
-                <span className="text-gray-300 truncate">{category.name}</span>
+          {categoryData.slice(0, 3).map((category, index) => {
+            const IconComponent = getCategoryIcon(category.name);
+            const total = categoryData.reduce((sum, cat) => sum + cat.value, 0);
+            const percentage = total > 0 ? ((category.value / total) * 100).toFixed(0) : '0';
+            
+            return (
+              <div key={index} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: category.color }}
+                  />
+                  <IconComponent className="w-3 h-3 text-white" />
+                  <span className="text-gray-300 truncate">{category.name}</span>
+                </div>
+                <span className="text-white font-semibold">${category.value.toFixed(0)} ({percentage}%)</span>
               </div>
-              <span className="text-white font-semibold">${category.value.toFixed(0)}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

@@ -54,6 +54,7 @@ interface SaveExpenseInput {
     paymentMethod?: string | null;
     aiCategory?: string | null;
     aiConfidence?: number | null;
+    priority?: 'high' | 'normal' | 'low';
   };
 }
 
@@ -79,16 +80,25 @@ export async function saveExpense({ supabase, userId, businessId, accountId, exp
 
   if (transactionError) throw transactionError;
 
+  // Store priority in metadata since priority column doesn't exist in schema
   const { error: approvalError } = await (supabase as any)
     .from('expense_approvals')
     .insert({
       business_id: businessId,
       transaction_id: transaction!.id,
       submitter_id: userId,
-      status: 'pending'
+      status: 'pending',
+      metadata: {
+        priority: expense.priority || 'normal'
+      }
     } as Database['public']['Tables']['expense_approvals']['Insert']);
 
   if (approvalError) throw approvalError;
+
+  // Dispatch event to notify Inbox to refresh
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('expenseAdded', { detail: { transactionId: transaction.id } }));
+  }
 
   return transaction;
 }

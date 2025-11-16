@@ -42,6 +42,7 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
   type BusinessListItem = { id: string; name: string };
   const [businesses, setBusinesses] = useState<BusinessListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { currentBusiness, setCurrentBusiness } = useBusiness();
   const { user } = useAuth();
 
@@ -106,6 +107,7 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
 
   const fetchBusinesses = async () => {
     try {
+      setError(null);
       const { data, error } = await (supabase as any)
         .from('businesses')
         .select('id, name')
@@ -113,13 +115,15 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
       
       if (error) throw error;
       setBusinesses(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching businesses:', error);
+      setError(error?.message || 'Failed to load businesses. Please try again.');
     }
   };
 
   const fetchAllTransactions = async () => {
     try {
+      setError(null);
       const { data, error } = await (supabase as any)
         .from('transactions')
         .select('*')
@@ -128,13 +132,17 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
       
       if (error) throw error;
       setAllTransactions(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching all transactions:', error);
+      setError(error?.message || 'Failed to load transactions. Please try again.');
     }
   };
 
   const fetchAccountsAndTransactions = async (bizId: string) => {
     try {
+      setError(null);
+      setLoading(true);
+      
       // Fetch real accounts
       const { data: accountsData, error: accountsError } = await (supabase as any)
         .from('accounts')
@@ -157,18 +165,19 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
       setAccounts(accountsData || []);
       setTransactions(transactionsData || []);
       
-      // Fetch recent expenses for preview
+      // Fetch recent expenses for preview (will be filtered by dateFilter in UI)
       const { data: recentExpensesData } = await (supabase as any)
         .from('transactions')
         .select('*, accounts(name, account_type)')
         .eq('business_id', bizId)
         .eq('transaction_type', 'expense')
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(50); // Fetch more to allow client-side filtering
       
       setRecentExpenses(recentExpensesData || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+      setError(error?.message || 'Failed to load accounts and transactions. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -177,11 +186,20 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
   const businessNames = businesses.map(b => b.name);
 
   const calcTotals = (biz: 'all' | string) => {
+    const { start, end } = getDateRange();
     const tx = biz === 'all' ? allTransactions : transactions.filter((t: { business_id?: string }) => t.business_id === biz);
-    const expense = tx
+    
+    // Filter by date range
+    const filteredTx = tx.filter((t: { date?: string }) => {
+      if (!t.date) return false;
+      const txDate = new Date(t.date);
+      return txDate >= start && txDate <= end;
+    });
+    
+    const expense = filteredTx
       .filter((t: { transaction_type?: string }) => t.transaction_type === 'expense')
       .reduce((s, t: { amount?: number }) => s + (t.amount || 0), 0);
-    const income = tx
+    const income = filteredTx
       .filter((t: { transaction_type?: string }) => t.transaction_type === 'income')
       .reduce((s, t: { amount?: number }) => s + (t.amount || 0), 0);
     return { expense, income };
@@ -314,10 +332,25 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
     }
   }, [selectedFilter, businesses]);
 
-  // Get recent activity (last 5 transactions)
+  // Get recent activity (last 5 transactions) - filtered by dateFilter
   const getRecentActivity = () => {
+    const { start, end } = getDateRange();
     const tx = selectedFilter === 'all' ? allTransactions : transactions.filter((t: { business_id?: string }) => t.business_id === selectedFilter);
-    return tx
+    
+    // Filter by date range
+    const filteredTx = tx.filter((t: { date?: string }) => {
+      if (!t.date) return false;
+      const txDate = new Date(t.date);
+      return txDate >= start && txDate <= end;
+    });
+    
+    return filteredTx
+      .sort((a: { date?: string }, b: { date?: string }) => {
+        // Sort by date descending (most recent first)
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      })
       .slice(0, 5)
       .map((t: { id?: string; description?: string; category?: string; amount?: number; transaction_type?: string; date?: string }) => ({
         id: t.id,
@@ -623,6 +656,37 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
     return <Receipt className="w-5 h-5" />;
   };
 
+  // Show error message if there's an error (but not during initial loading)
+  if (error && !loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#1a1d35] to-[#0f1221] text-white px-4 sm:px-6 py-6 sm:py-8 overflow-x-hidden">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-red-400 mb-2">Error Loading Data</h3>
+                <p className="text-gray-300">{error}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setError(null);
+                  if (currentBusiness?.id) {
+                    fetchAccountsAndTransactions(currentBusiness.id);
+                    fetchBusinesses();
+                    fetchAllTransactions();
+                  }
+                }}
+                className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl font-semibold transition"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1a1d35] to-[#0f1221] text-white pb-24">
       {loading ? (
@@ -639,28 +703,29 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
       ) : (
         <>
       {/* Header */}
-      <div className="p-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Expense Manager</h1>
-        <button className="w-10 h-10 bg-[#2d3352] rounded-full flex items-center justify-center hover:bg-[#373d5f] transition">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between overflow-x-hidden">
+        <h1 className="text-2xl sm:text-3xl font-bold">Expense Manager</h1>
+        <button className="w-10 h-10 bg-[#2d3352] rounded-full flex items-center justify-center hover:bg-[#373d5f] transition active:scale-95">
           <Plus className="w-5 h-5" />
         </button>
       </div>
 
       {/* Expense Insights Section - Top Row */}
-      <div className="px-6 mb-6">
-        <h2 className="text-xl font-bold mb-4 text-white">Expense Insights</h2>
+      <div className="px-4 sm:px-6 mb-6 overflow-x-hidden">
+        <h2 className="text-lg sm:text-xl font-bold text-white mb-4">Expense Insights</h2>
+
         {(() => {
           const biz = selectedFilter === 'all' ? 'all' : selectedFilter;
           const { expense } = calcTotals(biz);
           return (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Expense Amount Card - Left */}
-              <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg shadow-red-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 w-full">
+              {/* Total Expense Card */}
+              <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-red-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
                 {/* Shiny corner */}
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-400 rounded-full blur-sm opacity-60" />
                 <div className="relative z-10">
-                  <div className="text-sm font-bold text-white mb-2">Total Expense</div>
-                  <div className="text-4xl font-bold text-red-400 mb-2">
+                  <div className="text-xs sm:text-sm font-bold text-white mb-2">Total Expense</div>
+                  <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-red-400 mb-2 break-words">
                     ${expense.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-xs text-gray-400">
@@ -669,34 +734,34 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
                 </div>
               </div>
 
-              {/* Expense Insights Card - Right */}
-              <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-xl p-6 shadow-lg shadow-blue-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+              {/* Key Metrics Card */}
+              <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-blue-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
                 {/* Shiny corner */}
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full blur-sm opacity-60" />
                 <div className="relative z-10">
-                  <h3 className="text-sm font-bold text-white mb-4">Key Metrics</h3>
-                  <div className="space-y-3">
+                  <h3 className="text-xs sm:text-sm font-bold text-white mb-3 sm:mb-4">Key Metrics</h3>
+                  <div className="space-y-2 sm:space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">Avg Daily Spend</span>
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-xs sm:text-sm font-bold text-white break-words text-right ml-2">
                         ${(expense / 30).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">This Week</span>
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-xs sm:text-sm font-bold text-white break-words text-right ml-2">
                         ${getThisWeekExpense().toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">Projected Month</span>
-                      <span className="text-sm font-bold text-white">
+                      <span className="text-xs sm:text-sm font-bold text-white break-words text-right ml-2">
                         ${(expense * 1.1).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">Top Category</span>
-                      <span className="text-sm font-bold text-white">{getTopCategory()}</span>
+                      <span className="text-xs sm:text-sm font-bold text-white truncate ml-2 max-w-[50%] text-right">{getTopCategory()}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">Spending Velocity</span>
@@ -707,13 +772,30 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
                   </div>
                 </div>
               </div>
+
+              {/* AI Insights Card */}
+              <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-purple-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300 md:col-span-2 lg:col-span-1">
+                {/* Shiny corner */}
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-purple-400 rounded-full blur-sm opacity-60" />
+                <div className="relative z-10 h-full flex flex-col">
+                  <h3 className="text-xs sm:text-sm font-bold text-white mb-3 sm:mb-4">AI Insights</h3>
+                  <div className="flex-1 overflow-y-auto max-h-[400px]">
+                    <ExpenseAIInsights 
+                      selectedFilter={selectedFilter}
+                      transactions={transactions}
+                      allTransactions={allTransactions}
+                      embedded={true}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })()}
       </div>
 
       {/* Filter Tabs */}
-      <div className="px-6 mb-6">
+      <div className="px-4 sm:px-6 mb-6 overflow-x-hidden">
         <div className="flex gap-3 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => {
@@ -762,7 +844,7 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
       {isSingleBusiness && (
         <>
           {/* Quick Date Filters */}
-          <div className="px-6 mb-4">
+          <div className="px-4 sm:px-6 mb-4 overflow-x-hidden">
             <div className="flex items-center gap-2 flex-wrap">
               <Filter className="w-4 h-4 text-gray-400" />
               <span className="text-sm text-gray-400 mr-2">Period:</span>
@@ -962,14 +1044,6 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
               </div>
             </div>
 
-          {/* Expense AI Insights Card - Full Width */}
-          <div className="px-6 mb-6">
-            <ExpenseAIInsights 
-              selectedFilter={selectedFilter}
-              transactions={transactions}
-              allTransactions={allTransactions}
-            />
-          </div>
 
           {/* Recent Activity and Recent Expenses - Side by Side */}
           <div className="px-6 mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1011,41 +1085,57 @@ export default function AccountsPage({ onNavigate, currentPage = 'accounts' }: P
                 <button className="text-sm text-blue-400 hover:text-blue-300">View All</button>
               </div>
               <div className="space-y-3">
-                {recentExpenses.length > 0 ? recentExpenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between p-3 bg-[#252a45]/50 rounded-lg hover:bg-[#2d3352]/50 transition border border-white/5">
-                    <div className="flex items-center gap-4 flex-1">
-                      {/* Icon based on expense category */}
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white">
-                        {getExpenseIcon(expense.category || '')}
+                {(() => {
+                  // Filter recent expenses by dateFilter
+                  const { start, end } = getDateRange();
+                  const filteredExpenses = recentExpenses.filter((expense: { date?: string; business_id?: string }) => {
+                    if (!expense.date) return false;
+                    if (selectedFilter !== 'all' && expense.business_id !== selectedFilter) return false;
+                    const expenseDate = new Date(expense.date);
+                    return expenseDate >= start && expenseDate <= end;
+                  }).sort((a: { date?: string }, b: { date?: string }) => {
+                    // Sort by date descending (most recent first)
+                    const dateA = a.date ? new Date(a.date).getTime() : 0;
+                    const dateB = b.date ? new Date(b.date).getTime() : 0;
+                    return dateB - dateA;
+                  }).slice(0, 5); // Show top 5
+                  
+                  return filteredExpenses.length > 0 ? filteredExpenses.map((expense) => (
+                    <div key={expense.id} className="flex items-center justify-between p-3 bg-[#252a45]/50 rounded-lg hover:bg-[#2d3352]/50 transition border border-white/5">
+                      <div className="flex items-center gap-4 flex-1">
+                        {/* Icon based on expense category */}
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white">
+                          {getExpenseIcon(expense.category || '')}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">{expense.description || 'Expense'}</p>
+                          <p className="text-xs text-gray-400">{expense.category || 'Uncategorized'}</p>
+                          <p className="text-xs text-gray-500">
+                            {expense.date ? new Date(expense.date).toLocaleDateString() : 'N/A'} · {expense.accounts?.name || 'Account'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{expense.description || 'Expense'}</p>
-                        <p className="text-xs text-gray-400">{expense.category || 'Uncategorized'}</p>
-                        <p className="text-xs text-gray-500">
-                          {expense.date ? new Date(expense.date).toLocaleDateString() : 'N/A'} · {expense.accounts?.name || 'Account'}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-red-400">
+                          ${(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                        {expense.receipt_url && (
+                          <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">
+                            Receipt
+                          </a>
+                        )}
+                        <button
+                          onClick={() => handleEditExpense(expense.id)}
+                          className="p-1.5 hover:bg-[#373d5f] rounded transition"
+                        >
+                          <Edit2 className="w-4 h-4 text-gray-400" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-red-400">
-                        ${(expense.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </span>
-                      {expense.receipt_url && (
-                        <a href={expense.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">
-                          Receipt
-                        </a>
-                      )}
-                      <button
-                        onClick={() => handleEditExpense(expense.id)}
-                        className="p-1.5 hover:bg-[#373d5f] rounded transition"
-                      >
-                        <Edit2 className="w-4 h-4 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-sm text-gray-400 text-center py-4">No recent expenses</p>
-                )}
+                  )) : (
+                    <p className="text-sm text-gray-400 text-center py-4">No recent expenses for selected period</p>
+                  );
+                })()}
               </div>
             </div>
           </div>

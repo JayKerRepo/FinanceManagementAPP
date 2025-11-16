@@ -106,26 +106,6 @@ export default function ReportsTabs({ businessId, timeRange, currentBusiness }: 
               ))}
             </select>
           </div>
-
-          {/* Time Range Selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">Range:</span>
-            <div className="flex gap-1 bg-[#1e2337] p-1 rounded-lg">
-              {timeRanges.map(range => (
-                <button
-                  key={range.value}
-                  onClick={() => setTimeRangeState(range.value)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition ${
-                    timeRangeState === range.value
-                      ? 'bg-blue-500 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -168,6 +148,7 @@ export default function ReportsTabs({ businessId, timeRange, currentBusiness }: 
               businessId={selectedBusiness === 'all' ? null : selectedBusiness}
               timeRange={parseInt(timeRangeState)}
               currentBusiness={currentBusiness}
+              timeRangeState={timeRangeState}
             />
           </Suspense>
         </ErrorBoundary>

@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
+    "clean": "node -e \"const fs = require('fs'); const path = require('path'); ['/.next', '/tsconfig.tsbuildinfo'].forEach(p => { try { const fullPath = path.join(process.cwd(), p); if (fs.existsSync(fullPath)) { fs.rmSync(fullPath, { recursive: true, force: true }); console.log('Deleted', p); } } catch(e) { console.error('Error deleting', p, e.message); } });\"",
+    "clean:force": "node -e \"const fs = require('fs'); const path = require('path'); const rimraf = (dir) => { try { if (fs.existsSync(dir)) { fs.readdirSync(dir).forEach(f => { const curPath = path.join(dir, f); if (fs.lstatSync(curPath).isDirectory()) { rimraf(curPath); } else { fs.unlinkSync(curPath); } }); fs.rmdirSync(dir); } } catch(e) { } }; ['.next', 'tsconfig.tsbuildinfo', 'node_modules/.cache'].forEach(p => { const fullPath = path.join(process.cwd(), p); rimraf(fullPath); console.log('Cleaned', p); });\"",
+    "prebuild": "npm run clean:force",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

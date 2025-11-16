@@ -6,13 +6,14 @@ import {
   Sparkles, Calendar, DollarSign, Tag, Building2, CreditCard,
   FileText, Zap, TrendingUp, AlertCircle, Loader
 } from 'lucide-react';
-import VoiceExpenseRecorder from './VoiceExpenseRecorder';
+import VoiceAgentCore from './VoiceAgentCore';
 import ReceiptOCRUploader from './ReceiptOCRUploader';
 import { useAuth } from '../contexts/AuthContext';
 import { useBusiness } from '../contexts/BusinessContext';
 import { supabase } from '../lib/supabase';
 import { Database } from '../lib/database.types';
 import { getOrCreateDefaultAccount, saveExpense, validateExpense } from '../lib/expenseHelpers';
+import type { ExpenseDraft } from '../services/interfaces/IExpenseDraftManager';
 
 interface Business {
   id: string;
@@ -26,6 +27,7 @@ interface ExpenseEntryHubProps {
   initialMode?: EntryMode;
   editExpense?: any; // Expense data for editing
   initialBusinessId?: string; // Selected business from context
+  prefillData?: ParsedExpense; // Pre-filled data from voice agent
 }
 
 type EntryMode = 'voice' | 'chat' | 'ocr' | 'manual';
@@ -40,9 +42,10 @@ interface ParsedExpense {
   notes?: string;
   receiptUrl?: string;
   extractedBusinessName?: string; // Business name extracted from chat text
+  priority?: 'high' | 'normal' | 'low'; // Priority level for expense approval
 }
 
-export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, initialMode = 'voice', editExpense, initialBusinessId }: ExpenseEntryHubProps) {
+export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, initialMode = 'voice', editExpense, initialBusinessId, prefillData }: ExpenseEntryHubProps) {
   const { user } = useAuth();
   const { accounts } = useBusiness();
   
@@ -67,7 +70,14 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
   const [pendingExpense, setPendingExpense] = useState<ParsedExpense | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Pre-fill form if editing
+  // Auto-switch to manual mode if prefillData is provided
+  useEffect(() => {
+    if (prefillData && mode !== 'manual') {
+      setMode('manual');
+    }
+  }, [prefillData, mode]);
+
+  // Pre-fill form if editing or if prefillData is provided
   const [manualForm, setManualForm] = useState<ParsedExpense>(() => {
     if (editExpense) {
       // Extract payment method from metadata if it exists
@@ -83,8 +93,25 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
         paymentMethod: paymentMethod,
         notes: editExpense.notes || '',
         receiptUrl: editExpense.receipt_url || editExpense.receiptUrl,
+        priority: editExpense.priority || 'normal',
       };
     }
+    
+    // NEW: Pre-fill from voice agent draft
+    if (prefillData) {
+      return {
+        amount: prefillData.amount,
+        vendor: prefillData.vendor || '',
+        category: prefillData.category || '',
+        business: prefillData.business || initialBusinessId || businesses[0]?.id || '',
+        date: prefillData.date || new Date().toISOString().split('T')[0],
+        paymentMethod: prefillData.paymentMethod || 'credit_card',
+        notes: prefillData.notes || '',
+        receiptUrl: prefillData.receiptUrl,
+        priority: prefillData.priority || 'normal',
+      };
+    }
+    
     return {
       amount: undefined,
       vendor: '',
@@ -93,6 +120,7 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
       date: new Date().toISOString().split('T')[0],
       paymentMethod: 'credit_card',
       notes: '',
+      priority: 'normal',
     };
   });
 
@@ -205,7 +233,7 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
     return '';
   };
 
-  const handleChatSend = () => {
+  const handleChatSend = async () => {
     if (!chatInput.trim()) return;
     
     const userMessage = chatInput.trim();
@@ -213,8 +241,9 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
     setChatInput('');
     setIsProcessing(true);
 
-    setTimeout(() => {
-      const parsed = parseChatMessage(userMessage);
+    let parsed: ParsedExpense | null = null;
+    try {
+      parsed = parseChatMessage(userMessage);
       
       // Handle business name extraction
       if (parsed.extractedBusinessName && !parsed.business) {
@@ -251,20 +280,51 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
         return;
       }
       
-      // Store pending expense and show confirmation
-      setPendingExpense(parsed);
+      // Validate parsed is not null
+      if (!parsed) {
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Store pending expense and show confirmation (parsed is guaranteed non-null here)
+      const validParsed = parsed;
+      setPendingExpense(validParsed);
       setShowConfirmation(true);
       
       // Get business name for display
-      const businessName = parsed.business ? (businesses.find(b => b.id === String(parsed.business))?.name || 'Unknown Business') : 'Unknown Business';
+      const businessName = validParsed.business ? (businesses.find(b => b.id === String(validParsed.business))?.name || 'Unknown Business') : 'Unknown Business';
       
       setChatMessages(prev => [...prev, {
         role: 'assistant',
-        content: `Perfect!\n💰 Amount: $${parsed.amount || 0}\n🏢 Vendor: ${parsed.vendor || 'N/A'}\n📅 Date: ${parsed.date || 'N/A'}\n📂 Category: ${parsed.category || 'N/A'}\n🏢 Business: ${businessName}\n\nDoes this look correct?`
+        content: `Perfect!\n💰 Amount: $${validParsed.amount || 0}\n🏢 Vendor: ${validParsed.vendor || 'N/A'}\n📅 Date: ${validParsed.date || 'N/A'}\n📂 Category: ${validParsed.category || 'N/A'}\n🏢 Business: ${businessName}\n\nDoes this look correct?`
       }]);
       
       setIsProcessing(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Error processing chat message:', error);
+      // Transfer to manual entry on error
+      const expenseData: ParsedExpense = {
+        amount: parsed?.amount,
+        vendor: parsed?.vendor,
+        category: parsed?.category,
+        business: parsed?.business || initialBusinessId || businesses[0]?.id || '',
+        date: parsed?.date || new Date().toISOString().split('T')[0],
+        paymentMethod: 'credit_card',
+        notes: userMessage,
+        priority: 'normal'
+      };
+      
+      // Update manual form and switch to manual mode
+      setManualForm(expenseData);
+      setMode('manual');
+      
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Unable to process via Chat. Switched to Manual Entry with your data pre-filled.'
+      }]);
+      
+      setIsProcessing(false);
+    }
   };
 
   const parseChatMessage = (text: string): ParsedExpense => {
@@ -386,6 +446,7 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
       paymentMethod: 'credit_card',
       notes: `Added via chat: "${text}"`,
       extractedBusinessName: extractedBusinessName || undefined,
+      priority: 'normal', // Default priority for chat expenses
     };
   };
 
@@ -496,16 +557,21 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
           .single();
 
         if (existingApproval) {
-          // Update existing approval to pending
+          // Update existing approval to pending - store priority in metadata
+          const currentMetadata = existingApproval.metadata || {}
           await (supabase as any)
             .from('expense_approvals')
             .update({ 
               status: 'pending',
+              metadata: {
+                ...currentMetadata,
+                priority: exp.priority || 'normal'
+              },
               updated_at: new Date().toISOString(),
             })
             .eq('id', existingApproval.id);
         } else {
-          // Create new approval entry for edited expense
+          // Create new approval entry for edited expense - store priority in metadata
           await (supabase as any)
             .from('expense_approvals')
             .insert({
@@ -513,6 +579,9 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
               transaction_id: editExpense.id,
               submitter_id: user.id,
               status: 'pending',
+              metadata: {
+                priority: exp.priority || 'normal'
+              }
             });
         }
 
@@ -550,6 +619,7 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
           paymentMethod: exp.paymentMethod || null,
           aiCategory: exp.category!,
           aiConfidence: 0.95,
+          priority: exp.priority || 'normal',
         },
       });
 
@@ -625,13 +695,39 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
     }, 1500);
   };
 
-  const renderVoiceMode = () => (
-    <VoiceExpenseRecorder
-      onExpenseExtracted={handleExpenseExtracted}
-      businessId={businesses[0]?.id}
-      className="w-full"
-    />
-  );
+  const renderVoiceMode = () => {
+    const handleOpenManualEntry = (draft: ExpenseDraft) => {
+      // Convert ExpenseDraft to ParsedExpense format
+      const parsedExpense: ParsedExpense = {
+        amount: draft.amount || undefined,
+        vendor: draft.vendor || undefined,
+        category: draft.category || undefined,
+        business: draft.business || undefined,
+        date: draft.date || new Date().toISOString().split('T')[0],
+        paymentMethod: draft.payment_method || 'credit_card',
+        notes: draft.description || undefined,
+        receiptUrl: draft.receipt_url || undefined,
+        priority: draft.priority || 'normal'
+      };
+      
+      // Update manual form state
+      setManualForm(parsedExpense);
+      
+      // Switch to manual mode
+      setMode('manual');
+    };
+
+    return (
+      <VoiceAgentCore
+        onExpenseExtracted={handleExpenseExtracted}
+        businessId={businesses[0]?.id || initialBusinessId}
+        businesses={businesses}
+        className="w-full"
+        personality="friendly"
+        onOpenManualEntry={handleOpenManualEntry}
+      />
+    );
+  };
 
   const renderChatMode = () => (
     <div className="flex flex-col h-[500px]">
@@ -702,6 +798,28 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
                   {pendingExpense.business ? (businesses.find(b => b.id === String(pendingExpense.business))?.name || 'Unknown Business') : 'Unknown Business'}
                 </span>
               </div>
+            </div>
+            
+            {/* Priority Selector */}
+            <div className="bg-[#1a1d2e] border border-cyan-400/20 rounded-xl p-3">
+              <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-cyan-400" />
+                Priority (Optional)
+              </label>
+              <select
+                value={pendingExpense.priority || 'normal'}
+                onChange={(e) => {
+                  setPendingExpense({
+                    ...pendingExpense,
+                    priority: e.target.value as 'high' | 'normal' | 'low'
+                  });
+                }}
+                className="w-full bg-[#0f1729] border border-white/10 rounded-lg px-3 py-2 text-white focus:border-cyan-400 focus:outline-none"
+              >
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="low">Low</option>
+              </select>
             </div>
             
             <div className="flex gap-3">
@@ -856,6 +974,22 @@ export default function ExpenseEntryHub({ businesses, onClose, onExpenseAdded, i
             onChange={(e) => setManualForm({ ...manualForm, date: e.target.value })}
             className="w-full bg-[#252a41] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-cyan-400 focus:outline-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-cyan-400" />
+            Priority (Optional)
+          </label>
+          <select
+            value={manualForm.priority || 'normal'}
+            onChange={(e) => setManualForm({ ...manualForm, priority: e.target.value as 'high' | 'normal' | 'low' })}
+            className="w-full bg-[#252a41] border border-white/10 rounded-xl px-4 py-3 text-white focus:border-cyan-400 focus:outline-none"
+          >
+            <option value="normal">Normal</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select>
         </div>
       </div>
 
