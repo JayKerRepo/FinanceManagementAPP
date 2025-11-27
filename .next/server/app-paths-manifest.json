@@ -1,6 +1,7 @@
 {
-  "/page": "app/page.js",
+  "/auth/page": "app/auth/page.js",
   "/app/page": "app/app/page.js",
-  "/api/ocr-receipt/route": "app/api/ocr-receipt/route.js",
-  "/api/extract-expense/route": "app/api/extract-expense/route.js"
+  "/api/voice/extract-expense/route": "app/api/voice/extract-expense/route.js",
+  "/api/voice/stream/route": "app/api/voice/stream/route.js",
+  "/api/voice/synthesize/route": "app/api/voice/synthesize/route.js"
 }
