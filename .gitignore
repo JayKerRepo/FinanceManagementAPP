@@ -1,9 +1,16 @@
 # Build outputs
 .next/
+.next/**
 out/
 dist/
 dist-ssr/
 *.tsbuildinfo
+
+# Next.js cache (explicitly ignore large cache files)
+.next/cache/
+.next/cache/**
+*.pack
+*.pack.gz
 
 # Dependencies
 node_modules/

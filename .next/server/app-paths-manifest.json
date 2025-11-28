@@ -1,5 +1,0 @@
-{
-  "/app/page": "app/app/page.js",
-  "/api/investments/ai-insights/route": "app/api/investments/ai-insights/route.js",
-  "/api/investments/sync/route": "app/api/investments/sync/route.js"
-}
