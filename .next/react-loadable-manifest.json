@@ -1,60 +1,60 @@
 {
   "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
-    "id": 80485,
+    "id": "node_modules\\@supabase\\auth-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch",
     "files": []
   },
   "node_modules\\@supabase\\functions-js\\dist\\module\\helper.js -> @supabase/node-fetch": {
-    "id": 80485,
+    "id": "node_modules\\@supabase\\functions-js\\dist\\module\\helper.js -> @supabase/node-fetch",
     "files": []
   },
   "node_modules\\@supabase\\realtime-js\\dist\\module\\RealtimeClient.js -> @supabase/node-fetch": {
-    "id": 80485,
+    "id": "node_modules\\@supabase\\realtime-js\\dist\\module\\RealtimeClient.js -> @supabase/node-fetch",
     "files": []
   },
   "node_modules\\@supabase\\storage-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch": {
-    "id": 80485,
+    "id": "node_modules\\@supabase\\storage-js\\dist\\module\\lib\\helpers.js -> @supabase/node-fetch",
     "files": []
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./AnnualReport": {
-    "id": 1816,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./AnnualReport",
     "files": [
-      "static/chunks/816.5cd0e2bb.js"
+      "static/chunks/_app-pages-browser_src_components_reports_AnnualReport_tsx.js"
     ]
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./BudgetAnalysisReport": {
-    "id": 4810,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./BudgetAnalysisReport",
     "files": [
-      "static/chunks/810.8eb8c7ca.js"
+      "static/chunks/_app-pages-browser_src_components_reports_BudgetAnalysisReport_tsx.js"
     ]
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./MonthlyReport": {
-    "id": 93735,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./MonthlyReport",
     "files": [
-      "static/chunks/735.cb5a9447.js"
+      "static/chunks/_app-pages-browser_src_components_reports_MonthlyReport_tsx.js"
     ]
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./MultiBusinessReport": {
-    "id": 64048,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./MultiBusinessReport",
     "files": [
-      "static/chunks/48.84558dfe.js"
+      "static/chunks/_app-pages-browser_src_components_reports_MultiBusinessReport_tsx.js"
     ]
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./PersonalFinanceReport": {
-    "id": 69633,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./PersonalFinanceReport",
     "files": [
-      "static/chunks/633.81c8b6ae.js"
+      "static/chunks/_app-pages-browser_src_components_reports_PersonalFinanceReport_tsx.js"
     ]
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./QuarterlyReport": {
-    "id": 87316,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./QuarterlyReport",
     "files": [
-      "static/chunks/316.6a4b553c.js"
+      "static/chunks/_app-pages-browser_src_components_reports_QuarterlyReport_tsx.js"
     ]
   },
   "src\\components\\reports\\ReportsTabs.tsx -> ./WeeklyReport": {
-    "id": 82102,
+    "id": "src\\components\\reports\\ReportsTabs.tsx -> ./WeeklyReport",
     "files": [
-      "static/chunks/102.53555932.js"
+      "static/chunks/_app-pages-browser_src_components_reports_WeeklyReport_tsx.js"
     ]
   }
 }
