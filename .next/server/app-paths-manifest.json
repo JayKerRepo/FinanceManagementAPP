@@ -1,7 +1,25 @@
 {
-  "/auth/page": "app/auth/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/process-ai-task/route": "app/api/process-ai-task/route.js",
   "/app/page": "app/app/page.js",
+  "/auth/callback/page": "app/auth/callback/page.js",
+  "/auth/page": "app/auth/page.js",
+  "/demo/page": "app/demo/page.js",
+  "/page": "app/page.js",
+  "/api/agg/daily/route": "app/api/agg/daily/route.js",
+  "/api/agg/monthly/route": "app/api/agg/monthly/route.js",
+  "/api/chat/conversation/route": "app/api/chat/conversation/route.js",
+  "/api/chat/extract-expense/route": "app/api/chat/extract-expense/route.js",
+  "/api/insights/route": "app/api/insights/route.js",
+  "/api/investments/holdings/route": "app/api/investments/holdings/route.js",
+  "/api/investments/performance/route": "app/api/investments/performance/route.js",
+  "/api/investments/sync/route": "app/api/investments/sync/route.js",
+  "/api/investments/ai-insights/route": "app/api/investments/ai-insights/route.js",
+  "/api/investments/accounts/route": "app/api/investments/accounts/route.js",
+  "/api/voice/conversation/route": "app/api/voice/conversation/route.js",
   "/api/voice/extract-expense/route": "app/api/voice/extract-expense/route.js",
-  "/api/voice/stream/route": "app/api/voice/stream/route.js",
-  "/api/voice/synthesize/route": "app/api/voice/synthesize/route.js"
+  "/api/transcribe/route": "app/api/transcribe/route.js",
+  "/api/ocr-receipt/route": "app/api/ocr-receipt/route.js",
+  "/api/voice/synthesize/route": "app/api/voice/synthesize/route.js",
+  "/api/extract-expense/route": "app/api/extract-expense/route.js"
 }

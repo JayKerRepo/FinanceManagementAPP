@@ -58,6 +58,7 @@ import CrossBusinessFilter from './dashboard/CrossBusinessFilter';
 import HeatmapCalendar from './dashboard/HeatmapCalendar';
 import LivePLBadge from './dashboard/LivePLBadge';
 import AIInsightCard from './dashboard/AIInsightCard';
+import InvestmentsDashboard from './InvestmentsDashboard';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { supabase } from '../lib/supabase';
 
@@ -203,14 +204,28 @@ export default function DashboardMock() {
         setRevenueTrendData(months);
 
         // Fetch Net Worth (Assets - Liabilities)
-        // Assets: All account balances
+        // Assets: All account balances + Investments
         const { data: allAccounts } = await supabase
           .from('accounts')
           .select('balance, account_type')
           .in('business_id', businessIds)
           .eq('is_active', true);
 
-        const assets = allAccounts?.reduce((sum, acc: { balance?: number }) => sum + (acc.balance || 0), 0) || 0;
+        const accountAssets = allAccounts?.reduce((sum, acc: { balance?: number }) => sum + (acc.balance || 0), 0) || 0;
+
+        // Fetch Investment values
+        const { data: investmentAccounts } = await supabase
+          .from('investment_accounts')
+          .select('total_value')
+          .in('business_id', businessIds)
+          .eq('is_active', true);
+
+        const investmentValue = investmentAccounts?.reduce(
+          (sum, acc: { total_value?: number }) => sum + (acc.total_value || 0),
+          0
+        ) || 0;
+
+        const assets = accountAssets + investmentValue;
 
         // Liabilities: Outstanding invoices + credit card debts
         const { data: allInvoices } = await supabase
@@ -465,6 +480,16 @@ export default function DashboardMock() {
               {!sidebarCollapsed && <span className="font-medium">Reports</span>}
             </button>
 
+            <button
+              onClick={() => setActivePage('investments')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                activePage === 'investments' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <TrendingUp className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Investments</span>}
+            </button>
+
             {/* Business Management moved to profile dropdown */}
           </nav>
 
@@ -593,6 +618,7 @@ export default function DashboardMock() {
         {activePage === 'budgets' && <BudgetsPage />}
         {activePage === 'mileage' && <MileagePage />}
         {activePage === 'pnl' && <ProfitLossPage />}
+        {activePage === 'investments' && <InvestmentsDashboard />}
         {activePage === 'businesses' && <BusinessManagementPage />}
         {activePage === 'settings' && <SettingsPage />}
 
