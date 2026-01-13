@@ -1,35 +1,37 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "expenseiq-nextjs",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "0.1.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "clean": "node -e \"const fs = require('fs'); const path = require('path'); ['/.next', '/tsconfig.tsbuildinfo'].forEach(p => { try { const fullPath = path.join(process.cwd(), p); if (fs.existsSync(fullPath)) { fs.rmSync(fullPath, { recursive: true, force: true }); console.log('Deleted', p); } } catch(e) { console.error('Error deleting', p, e.message); } });\"",
+    "clean:force": "node -e \"const fs = require('fs'); const path = require('path'); const rimraf = (dir) => { try { if (fs.existsSync(dir)) { fs.readdirSync(dir).forEach(f => { const curPath = path.join(dir, f); if (fs.lstatSync(curPath).isDirectory()) { rimraf(curPath); } else { fs.unlinkSync(curPath); } }); fs.rmdirSync(dir); } } catch(e) { } }; ['.next', 'tsconfig.tsbuildinfo', 'node_modules/.cache'].forEach(p => { const fullPath = path.join(process.cwd(), p); rimraf(fullPath); console.log('Cleaned', p); });\"",
+    "clean:windows": "powershell -ExecutionPolicy Bypass -File clean-build.ps1",
+    "prebuild": "npm run clean:force",
+    "predev": "node -e \"const fs = require('fs'); const path = require('path'); const nextPath = path.join(process.cwd(), '.next'); if (fs.existsSync(nextPath)) { try { fs.accessSync(path.join(nextPath, 'server', 'pages-manifest.json'), fs.constants.F_OK | fs.constants.W_OK); } catch(e) { console.log('⚠ .next directory may be locked, run: npm run clean:windows'); } }\"",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.344.0",
+    "next": "^15.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "recharts": "^2.8.0",
+    "react-spring": "^9.7.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.9.1",
+    "@types/node": "^20.0.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.18",
-    "eslint": "^9.9.1",
-    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
-    "eslint-plugin-react-refresh": "^0.4.11",
-    "globals": "^15.9.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.0.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.5.3",
-    "typescript-eslint": "^8.3.0",
-    "vite": "^5.4.2"
+    "typescript": "^5.5.3"
   }
 }

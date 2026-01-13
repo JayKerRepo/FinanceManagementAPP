@@ -1,63 +1,89 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, Receipt, MessageSquare, AlertCircle, Eye } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export default function InboxPage() {
   const [selectedApproval, setSelectedApproval] = useState<string | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  const pendingApprovals = [
-    {
-      id: '1',
-      type: 'expense',
-      submitter: 'John Smith',
-      submitterAvatar: 'JS',
-      amount: 245.50,
-      category: 'Travel & Meals',
-      description: 'Client dinner at The Steakhouse',
-      date: '2025-01-20',
-      submittedAt: '2 hours ago',
-      priority: 'normal',
-      hasReceipt: true,
-    },
-    {
-      id: '2',
-      type: 'expense',
-      submitter: 'Sarah Johnson',
-      submitterAvatar: 'SJ',
-      amount: 1250.00,
-      category: 'Equipment',
-      description: 'New laptop for development',
-      date: '2025-01-19',
-      submittedAt: '1 day ago',
-      priority: 'high',
-      hasReceipt: true,
-    },
-    {
-      id: '3',
-      type: 'expense',
-      submitter: 'Mike Davis',
-      submitterAvatar: 'MD',
-      amount: 89.99,
-      category: 'Software',
-      description: 'Annual subscription renewal',
-      date: '2025-01-18',
-      submittedAt: '2 days ago',
-      priority: 'normal',
-      hasReceipt: false,
-    },
-    {
-      id: '4',
-      type: 'mileage',
-      submitter: 'Emily Chen',
-      submitterAvatar: 'EC',
-      amount: 67.50,
-      category: 'Mileage',
-      description: '100.7 miles - Client site visit',
-      date: '2025-01-17',
-      submittedAt: '3 days ago',
-      priority: 'normal',
-      hasReceipt: false,
-    },
-  ];
+  useEffect(() => {
+    if (user) {
+      fetchApprovals();
+    }
+  }, [user]);
+
+  // Listen for expense additions to refresh inbox immediately
+  useEffect(() => {
+    const handleExpenseAdded = () => {
+      fetchApprovals();
+    };
+
+    // Listen for custom event when expense is added
+    window.addEventListener('expenseAdded', handleExpenseAdded);
+    
+    // Also poll for updates every 5 seconds as a fallback
+    const pollInterval = setInterval(() => {
+      if (user) {
+        fetchApprovals();
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('expenseAdded', handleExpenseAdded);
+      clearInterval(pollInterval);
+    };
+  }, [user]);
+
+  const handleApproval = async (approvalId: string, action: 'approved' | 'rejected') => {
+    try {
+      if (!user) {
+        alert('You must be signed in to approve or reject.');
+        return;
+      }
+      const { error } = await (supabase as any)
+        .from('expense_approvals')
+        .update({
+          status: action,
+          reviewed_at: new Date().toISOString(),
+          approver_id: user.id
+        })
+        .eq('id', approvalId);
+
+      if (error) throw error;
+      
+      // Refresh approvals list
+      await fetchApprovals();
+      setSelectedApproval(null);
+    } catch (error) {
+      console.error('Error updating approval:', error);
+      alert('Failed to update approval. Please try again.');
+    }
+  };
+
+  const fetchApprovals = async () => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('expense_approvals')
+        .select(`
+          *,
+          transactions(*),
+          businesses(name),
+          profiles!expense_approvals_submitter_id_fkey(full_name, email)
+        `)
+        .eq('status', 'pending')
+        .order('submitted_at', { ascending: false });
+
+      if (error) throw error;
+      setPendingApprovals(data || []);
+    } catch (error) {
+      console.error('Error fetching approvals:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getPriorityBadge = (priority: string) => {
     const badges = {
@@ -74,6 +100,21 @@ export default function InboxPage() {
       </div>
     );
   };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-700 rounded mb-4"></div>
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-gray-700 rounded-2xl p-6 h-32"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -123,41 +164,46 @@ export default function InboxPage() {
       </div>
 
       <div className="space-y-3">
-        {pendingApprovals.map((approval) => (
-          <div
-            key={approval.id}
-            className="bg-[#1a1d2e] rounded-2xl p-5 border border-white/5 hover:border-blue-500/30 transition"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center font-bold text-sm flex-shrink-0">
-                  {approval.submitterAvatar}
+        {pendingApprovals.map((approval: any) => {
+          const transaction = approval.transactions;
+          const submitter = approval.profiles;
+          const business = approval.businesses;
+          
+          return (
+            <div
+              key={approval.id}
+              className="bg-[#1a1d2e] rounded-2xl p-5 border border-white/5 hover:border-blue-500/30 transition"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    {submitter?.full_name?.charAt(0) || 'U'}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-bold text-lg">{submitter?.full_name || 'Unknown User'}</h3>
+                      {getPriorityBadge((approval.metadata as any)?.priority || approval.priority || 'normal')}
+                      {transaction?.receipt_url && (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400">
+                          <Receipt className="w-3 h-3" />
+                          <span className="text-xs font-semibold">Receipt</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-gray-400 text-sm mb-2">{transaction?.description || 'No description'}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span>{transaction?.category || 'Uncategorized'}</span>
+                      <span>•</span>
+                      <span>{transaction?.date ? new Date(transaction.date).toLocaleDateString() : 'No date'}</span>
+                      <span>•</span>
+                      <span>{approval.submitted_at ? new Date(approval.submitted_at).toLocaleDateString() : 'Unknown'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-bold text-lg">{approval.submitter}</h3>
-                    {getPriorityBadge(approval.priority)}
-                    {approval.hasReceipt && (
-                      <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/20 text-green-400">
-                        <Receipt className="w-3 h-3" />
-                        <span className="text-xs font-semibold">Receipt</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-gray-400 text-sm mb-2">{approval.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span>{approval.category}</span>
-                    <span>•</span>
-                    <span>{new Date(approval.date).toLocaleDateString()}</span>
-                    <span>•</span>
-                    <span>{approval.submittedAt}</span>
-                  </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-blue-400">${transaction?.amount?.toFixed(2) || '0.00'}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-blue-400">${approval.amount.toFixed(2)}</p>
-              </div>
-            </div>
 
             <div className="flex items-center gap-3">
               <button
@@ -167,17 +213,24 @@ export default function InboxPage() {
                 <Eye className="w-4 h-4" />
                 View Details
               </button>
-              <button className="flex-1 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-semibold transition flex items-center justify-center gap-2">
+              <button 
+                onClick={() => handleApproval(approval.id, 'approved')}
+                className="flex-1 py-3 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+              >
                 <CheckCircle className="w-4 h-4" />
                 Approve
               </button>
-              <button className="flex-1 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition flex items-center justify-center gap-2">
+              <button 
+                onClick={() => handleApproval(approval.id, 'rejected')}
+                className="flex-1 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+              >
                 <XCircle className="w-4 h-4" />
                 Reject
               </button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {pendingApprovals.length === 0 && (
@@ -199,55 +252,72 @@ export default function InboxPage() {
               const approval = pendingApprovals.find(a => a.id === selectedApproval);
               if (!approval) return null;
 
+              const transaction = approval.transactions;
+              const submitter = approval.profiles;
+              const business = approval.businesses;
+
               return (
                 <div className="space-y-6">
                   <div className="flex items-center gap-4 pb-6 border-b border-white/10">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center font-bold text-xl">
-                      {approval.submitterAvatar}
+                      {submitter?.full_name?.charAt(0) || 'U'}
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">{approval.submitter}</h3>
-                      <p className="text-sm text-gray-400">Submitted {approval.submittedAt}</p>
+                      <h3 className="font-bold text-lg">{submitter?.full_name || 'Unknown User'}</h3>
+                      <p className="text-sm text-gray-400">
+                        Submitted {approval.submitted_at ? new Date(approval.submitted_at).toLocaleDateString() : 'Unknown'}
+                      </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Amount</p>
-                      <p className="text-2xl font-bold text-blue-400">${approval.amount.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-blue-400">
+                        ${(transaction?.amount || 0).toFixed(2)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Category</p>
-                      <p className="text-lg font-semibold">{approval.category}</p>
+                      <p className="text-lg font-semibold">{transaction?.category || 'Uncategorized'}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Date</p>
-                      <p className="text-lg font-semibold">{new Date(approval.date).toLocaleDateString()}</p>
+                      <p className="text-lg font-semibold">
+                        {transaction?.date ? new Date(transaction.date).toLocaleDateString() : 'No date'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Priority</p>
-                      {getPriorityBadge(approval.priority)}
+                      {getPriorityBadge((approval.metadata as any)?.priority || approval.priority || 'normal')}
                     </div>
                   </div>
 
                   <div>
                     <p className="text-xs text-gray-400 mb-2">Description</p>
-                    <p className="text-sm">{approval.description}</p>
+                    <p className="text-sm">{transaction?.description || 'No description'}</p>
                   </div>
 
-                  {approval.hasReceipt && (
+                  {transaction?.receipt_url && (
                     <div className="bg-[#252a41] rounded-xl p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <Receipt className="w-5 h-5 text-blue-400" />
                           <div>
                             <p className="font-semibold text-sm">Receipt Attached</p>
-                            <p className="text-xs text-gray-400">receipt-{approval.id}.pdf</p>
+                            <p className="text-xs text-gray-400">
+                              {transaction.receipt_url.split('/').pop() || `receipt-${approval.id}.pdf`}
+                            </p>
                           </div>
                         </div>
-                        <button className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg font-semibold transition text-sm">
+                        <a 
+                          href={transaction.receipt_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg font-semibold transition text-sm"
+                        >
                           View
-                        </button>
+                        </a>
                       </div>
                     </div>
                   )}
@@ -268,11 +338,17 @@ export default function InboxPage() {
                     >
                       Cancel
                     </button>
-                    <button className="flex-1 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => handleApproval(approval.id, 'rejected')}
+                      className="flex-1 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+                    >
                       <XCircle className="w-5 h-5" />
                       Reject
                     </button>
-                    <button className="flex-1 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl font-semibold transition flex items-center justify-center gap-2">
+                    <button 
+                      onClick={() => handleApproval(approval.id, 'approved')}
+                      className="flex-1 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl font-semibold transition flex items-center justify-center gap-2"
+                    >
                       <CheckCircle className="w-5 h-5" />
                       Approve
                     </button>

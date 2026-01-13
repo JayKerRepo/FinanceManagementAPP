@@ -63,7 +63,7 @@ export default function BusinessManagementPage() {
     setLoading(true);
     try {
       if (editingBusiness) {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('businesses')
           .update({
             name: formData.name,
@@ -75,7 +75,7 @@ export default function BusinessManagementPage() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('businesses')
           .insert({
             name: formData.name,

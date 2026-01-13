@@ -1,3 +1,5 @@
+'use client'
+
 import {
   Mic,
   Camera,
@@ -31,24 +33,38 @@ import {
   Bell,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { useBusiness } from '../contexts/BusinessContext';
 import BusinessSwitcher from './BusinessSwitcher';
 import AccountsPage from './AccountsPage';
+import { ErrorBoundary } from './ErrorBoundary';
 import BudgetsPage from './BudgetsPage';
-import ReportsPage from './ReportsPage';
+import ReportsTabs from './reports/ReportsTabs';
 import ExpenseEntryHub from './ExpenseEntryHub';
 import SettingsPage from './SettingsPage';
 import BusinessManagementPage from './BusinessManagementPage';
 import InvoicesPage from './InvoicesPage';
+import InvoiceManagement from './InvoiceManagement';
 import ProfitLossPage from './ProfitLossPage';
 import MileagePage from './MileagePage';
 import InboxPage from './InboxPage';
 import CategoryManagement from './CategoryManagement';
+import LiveKPICards from './dashboard/LiveKPICards';
+import CompactCharts from './dashboard/CompactCharts';
+import SmartTimeSlider, { TimeRange } from './dashboard/SmartTimeSlider';
+import CrossBusinessFilter from './dashboard/CrossBusinessFilter';
+import HeatmapCalendar from './dashboard/HeatmapCalendar';
+import LivePLBadge from './dashboard/LivePLBadge';
+import AIInsightCard from './dashboard/AIInsightCard';
+import InvestmentsDashboard from './InvestmentsDashboard';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { supabase } from '../lib/supabase';
 
 export default function DashboardMock() {
   const { profile, signOut } = useAuth();
+  const router = useRouter();
   const { currentBusiness, accounts, businesses } = useBusiness();
   const [activePage, setActivePage] = useState('dashboard');
   const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -57,12 +73,208 @@ export default function DashboardMock() {
   const [chatMessage, setChatMessage] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<string[]>([]);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [unreadNotifications, setUnreadNotifications] = useState(4);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [expenseEntryMode, setExpenseEntryMode] = useState<'voice' | 'chat' | 'ocr' | 'manual'>('voice');
+  const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>([]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+    end: new Date(),
+    label: 'Last 30 days',
+    type: 'month'
+  });
+  const [revenue, setRevenue] = useState(0);
+  const [revenueChange, setRevenueChange] = useState(0);
+  const [revenueTrendData, setRevenueTrendData] = useState<Array<{ month: string; revenue: number }>>([]);
+  const [netWorth, setNetWorth] = useState(0);
+  const [totalAssets, setTotalAssets] = useState(0);
+  const [totalLiabilities, setTotalLiabilities] = useState(0);
+
+  // Initialize based on user preferences
+  useEffect(() => {
+    if (profile?.preferences) {
+      const preferences = profile.preferences as any;
+      
+      // Set default view based on preferences
+      if (preferences.defaultView && preferences.defaultView !== 'dashboard') {
+        setActivePage(preferences.defaultView);
+      }
+      
+      // Auto-open expense entry if preference is enabled
+      if (preferences.autoOpenExpenseEntry) {
+        setShowVoiceModal(true);
+      }
+    }
+  }, [profile]);
+
+  // Fetch pending approvals count for INBOX badge
+  useEffect(() => {
+    const fetchPendingApprovalsCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('expense_approvals')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+        
+        if (!error && count !== null) {
+          setUnreadNotifications(count);
+        }
+      } catch (error) {
+        console.error('Error fetching pending approvals count:', error);
+      }
+    };
+
+    if (profile) {
+      fetchPendingApprovalsCount();
+      
+      // Listen for expense additions to refresh count
+      const handleExpenseAdded = () => {
+        fetchPendingApprovalsCount();
+      };
+      
+      window.addEventListener('expenseAdded', handleExpenseAdded);
+      
+      // Poll every 10 seconds as fallback
+      const pollInterval = setInterval(fetchPendingApprovalsCount, 10000);
+      
+      return () => {
+        window.removeEventListener('expenseAdded', handleExpenseAdded);
+        clearInterval(pollInterval);
+      };
+    }
+  }, [profile]);
+
+  // Fetch Revenue and Net Worth data
+  useEffect(() => {
+    const fetchFinancialOverview = async () => {
+      if (!businesses || businesses.length === 0) return;
+
+      try {
+        const businessIds = businesses.map(b => b.id);
+        const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+        const lastYearStart = new Date(new Date().getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+        const lastYearEnd = new Date(new Date().getFullYear() - 1, 11, 31).toISOString().split('T')[0];
+
+        // Fetch Revenue (YTD Income from all businesses)
+        const { data: allBusinessIncome } = await supabase
+          .from('transactions')
+          .select('amount, date')
+          .eq('transaction_type', 'income')
+          .in('business_id', businessIds)
+          .gte('date', yearStart);
+
+        // Fetch last year income for comparison
+        const { data: lastYearIncome } = await supabase
+          .from('transactions')
+          .select('amount')
+          .eq('transaction_type', 'income')
+          .in('business_id', businessIds)
+          .gte('date', lastYearStart)
+          .lte('date', lastYearEnd);
+
+        const currentRevenue = allBusinessIncome?.reduce((sum, t: { amount?: number }) => sum + (t.amount || 0), 0) || 0;
+        const lastYearRevenue = lastYearIncome?.reduce((sum, t: { amount?: number }) => sum + (t.amount || 0), 0) || 0;
+        const change = lastYearRevenue > 0 ? ((currentRevenue - lastYearRevenue) / lastYearRevenue) * 100 : 0;
+
+        setRevenue(currentRevenue);
+        setRevenueChange(change);
+
+        // Generate revenue trend data (last 6 months)
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthDate = new Date();
+          monthDate.setMonth(monthDate.getMonth() - i);
+          const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).toISOString().split('T')[0];
+          const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).toISOString().split('T')[0];
+          
+          const { data: monthIncome } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('transaction_type', 'income')
+            .in('business_id', businessIds)
+            .gte('date', monthStart)
+            .lte('date', monthEnd);
+
+          const monthRevenue = monthIncome?.reduce((sum, t: { amount?: number }) => sum + (t.amount || 0), 0) || 0;
+          months.push({
+            month: monthDate.toLocaleDateString('en-US', { month: 'short' }),
+            revenue: monthRevenue
+          });
+        }
+        setRevenueTrendData(months);
+
+        // Fetch Net Worth (Assets - Liabilities)
+        // Assets: All account balances + Investments
+        const { data: allAccounts } = await supabase
+          .from('accounts')
+          .select('balance, account_type')
+          .in('business_id', businessIds)
+          .eq('is_active', true);
+
+        const accountAssets = allAccounts?.reduce((sum, acc: { balance?: number }) => sum + (acc.balance || 0), 0) || 0;
+
+        // Fetch Investment values
+        const { data: investmentAccounts } = await supabase
+          .from('investment_accounts')
+          .select('total_value')
+          .in('business_id', businessIds)
+          .eq('is_active', true);
+
+        const investmentValue = investmentAccounts?.reduce(
+          (sum, acc: { total_value?: number }) => sum + (acc.total_value || 0),
+          0
+        ) || 0;
+
+        const assets = accountAssets + investmentValue;
+
+        // Liabilities: Outstanding invoices + credit card debts
+        const { data: allInvoices } = await supabase
+          .from('invoices')
+          .select('total_amount, paid_amount')
+          .in('business_id', businessIds)
+          .in('status', ['sent', 'partial', 'overdue']);
+
+        const outstandingInvoices = allInvoices?.reduce(
+          (sum, inv: { total_amount?: number; paid_amount?: number }) => sum + ((inv.total_amount || 0) - (inv.paid_amount || 0)),
+          0
+        ) || 0;
+
+        // Credit card debts (negative balances)
+        const creditCardDebts = allAccounts
+          ?.filter((acc: { account_type?: string; balance?: number }) => acc.account_type === 'credit_card' && (acc.balance ?? 0) < 0)
+          .reduce((sum, acc: { balance?: number }) => sum + Math.abs(acc.balance || 0), 0) || 0;
+
+        const liabilities = outstandingInvoices + creditCardDebts;
+        const netWorthValue = assets - liabilities;
+
+        setTotalAssets(assets);
+        setTotalLiabilities(liabilities);
+        setNetWorth(netWorthValue);
+      } catch (error) {
+        console.error('Error fetching financial overview:', error);
+      }
+    };
+
+    if (activePage === 'dashboard') {
+      fetchFinancialOverview();
+    }
+  }, [businesses, activePage]);
 
   const handleSignOut = async () => {
     await signOut();
-    window.location.href = '/';
+    router.push('/');
+  };
+
+  const handleBusinessToggle = (businessId: string, enabled: boolean) => {
+    if (enabled) {
+      setSelectedBusinesses(prev => [...prev, businessId]);
+    } else {
+      setSelectedBusinesses(prev => prev.filter(id => id !== businessId));
+    }
+  };
+
+  const handleTimeRangeChange = (newRange: TimeRange) => {
+    setTimeRange(newRange);
   };
 
   const getBusinessDisplay = () => {
@@ -268,6 +480,16 @@ export default function DashboardMock() {
               {!sidebarCollapsed && <span className="font-medium">Reports</span>}
             </button>
 
+            <button
+              onClick={() => setActivePage('investments')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+                activePage === 'investments' ? 'bg-[#2d3248] text-white' : 'text-gray-400 hover:text-white hover:bg-[#252a41]'
+              }`}
+            >
+              <TrendingUp className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">Investments</span>}
+            </button>
+
             {/* Business Management moved to profile dropdown */}
           </nav>
 
@@ -296,7 +518,7 @@ export default function DashboardMock() {
 
       {/* Main Content */}
       <main className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'ml-20' : 'ml-64'} pb-20`}>
-        <header className="bg-[#1a1d2e]/50 backdrop-blur-xl border-b border-white/5 p-6">
+        <header className="bg-[#1a1d2e]/50 backdrop-blur-xl border-b border-white/5 p-6 relative z-50">
           <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
               <h1 className="text-2xl font-bold mb-1">Welcome, {profile?.full_name || 'User'}!</h1>
@@ -304,8 +526,17 @@ export default function DashboardMock() {
                 {currentBusiness ? `${getBusinessDisplay()} - ${currentBusiness.business_type}` : 'No business selected'}
               </p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 relative z-[10000]">
               <BusinessSwitcher />
+              {activePage !== 'dashboard' && (
+                <button
+                  onClick={() => setShowVoiceModal(true)}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-4 py-2 rounded-xl font-semibold text-sm transition flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Expense
+                </button>
+              )}
               <button
                 onClick={() => setActivePage('inbox')}
                 className="relative w-10 h-10 bg-[#2d3248] hover:bg-[#373d5f] rounded-full flex items-center justify-center transition"
@@ -362,245 +593,166 @@ export default function DashboardMock() {
           </div>
         </header>
 
-        {activePage === 'expenses' && <AccountsPage />}
+        {activePage === 'expenses' && (
+          <ErrorBoundary fallback={
+            <div className="p-6">
+              <div className="bg-red-500/20 border border-red-500/50 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-red-400 mb-2">Error Loading Expense Manager</h3>
+                <p className="text-gray-300 mb-4">An unexpected error occurred. Please try refreshing the page or contact support if the issue persists.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-xl font-semibold transition"
+                >
+                  Refresh Page
+                </button>
+              </div>
+            </div>
+          }>
+            <AccountsPage />
+          </ErrorBoundary>
+        )}
         {activePage === 'categories' && <CategoryManagement />}
-        {activePage === 'reports' && <ReportsPage />}
+        {activePage === 'reports' && <ReportsTabs businessId={currentBusiness?.id} timeRange={30} currentBusiness={currentBusiness} />}
         {activePage === 'inbox' && <InboxPage />}
-        {activePage === 'invoices' && <InvoicesPage />}
+        {activePage === 'invoices' && <InvoiceManagement />}
         {activePage === 'budgets' && <BudgetsPage />}
         {activePage === 'mileage' && <MileagePage />}
         {activePage === 'pnl' && <ProfitLossPage />}
+        {activePage === 'investments' && <InvestmentsDashboard />}
         {activePage === 'businesses' && <BusinessManagementPage />}
         {activePage === 'settings' && <SettingsPage />}
 
         {activePage === 'dashboard' && (
         <div className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Left Column - Stats */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Stats Cards - Smaller */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gradient-to-br from-[#5b6ef6] to-[#8b5cf6] p-4 rounded-2xl relative overflow-hidden">
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm opacity-90">Total Balance</p>
-                      <Eye className="w-4 h-4 opacity-75" />
-                    </div>
-                    <p className="text-3xl font-bold mb-1">$24,634.49</p>
-                    <p className="text-xs opacity-75">+12% vs last month</p>
-                  </div>
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+          {/* Welcome message */}
+          <div className="mb-6 p-3 sm:p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/20 overflow-x-hidden">
+            <h2 className="text-base font-semibold mb-2">Welcome to your Dashboard!</h2>
+            <p className="text-xs sm:text-sm text-gray-400">
+              Use the + button below to add expenses, or explore your business insights.
+            </p>
+          </div>
+          
+          {/* Financial Overview - Revenue, Net Worth & AI Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {/* Revenue Card */}
+            <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-green-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Revenue</h3>
+                  <p className="text-xs text-gray-400">Year-to-Date (All Businesses + Personal)</p>
                 </div>
-
-                <div className="bg-[#1a1d2e] p-4 rounded-2xl border border-white/5">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-400">Outstanding Invoices</p>
-                    <FileText className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <p className="text-2xl font-bold mb-1">$6,347 <span className="text-sm text-red-400">missing</span></p>
-                </div>
-
-                <div className="bg-[#1a1d2e] p-4 rounded-2xl border border-white/5">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-400">Current P&L</p>
-                    <TrendingUp className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <p className="text-2xl font-bold mb-1">$3,550.00</p>
-                </div>
+                <TrendingUp className="w-8 h-8 text-green-400" />
               </div>
-
-              {/* Income & Expenses Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#1a1d2e] p-4 rounded-2xl border border-white/5">
-                  <p className="text-sm text-gray-400 mb-2">Income</p>
-                  <p className="text-2xl font-bold mb-1">$8,247.50</p>
-                  <p className="text-xs text-green-400">+8.2%</p>
+              <p className="text-4xl font-bold text-green-400 mb-2">
+                ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              {revenueChange !== 0 && (
+                <div className="flex items-center gap-2 text-sm mb-4">
+                  <TrendingUp className={`w-4 h-4 ${revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}`} />
+                  <span className={revenueChange >= 0 ? 'text-green-400' : 'text-red-400'}>
+                    {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}% vs last year
+                  </span>
                 </div>
-
-                <div className="bg-[#1a1d2e] p-4 rounded-2xl border border-white/5">
-                  <p className="text-sm text-gray-400 mb-2">Expenses</p>
-                  <p className="text-2xl font-bold mb-1">$4,127.30</p>
-                  <p className="text-xs text-red-400">-3.1%</p>
+              )}
+              {/* Mini revenue trend chart */}
+              {revenueTrendData.length > 0 && (
+                <div className="h-16 mt-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueTrendData}>
+                      <Area 
+                        type="monotone" 
+                        dataKey="revenue" 
+                        stroke="#10b981" 
+                        fill="#10b981" 
+                        fillOpacity={0.2} 
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
+              )}
+            </div>
+
+            {/* Net Worth Card */}
+            <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-purple-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">Net Worth</h3>
+                  <p className="text-xs text-gray-400">All Businesses + Personal</p>
+                </div>
+                <Wallet className="w-8 h-8 text-purple-400" />
               </div>
-
-              {/* Recent Activity */}
-              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                <h3 className="text-lg font-bold mb-4">Recent Activity</h3>
-                <div className="space-y-3">
-                  {recentTransactions.map((transaction) => (
-                    <div key={transaction.id} className="bg-[#252a41] p-4 rounded-xl">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-xl">
-                          {transaction.icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-sm mb-1">{transaction.title}</p>
-                          <p className="text-xs text-gray-400 mb-2">{transaction.description}</p>
-                          <p className="text-xs text-gray-500">{transaction.date}</p>
-                        </div>
-                        <p className={`text-lg font-bold ${transaction.amount < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                          {transaction.amount < 0 ? '-' : '+'}${Math.abs(transaction.amount).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <p className={`text-4xl font-bold mb-2 ${netWorth >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
+                ${Math.abs(netWorth).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="p-3 bg-[#252a45]/50 rounded-lg">
+                  <p className="text-xs text-gray-400 mb-1">Assets</p>
+                  <p className="text-lg font-bold text-green-400">${totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-              </div>
-
-              {/* Voice Assistant & Smart Chat */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                  <h2 className="text-xl font-bold mb-4">Voice Assistant</h2>
-                  <div className="text-center">
-                    <p className="text-gray-400 text-sm mb-6">Ask me anything<br />about your finances</p>
-                    <button
-                      onClick={() => {
-                        setExpenseEntryMode('voice');
-                        setShowVoiceModal(true);
-                      }}
-                      className="relative group mx-auto mb-4"
-                    >
-                      <div className="w-32 h-32 bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 rounded-full flex items-center justify-center relative overflow-hidden transition-transform group-hover:scale-105">
-                        <div className="absolute inset-0 bg-purple-600/50 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-                        <Mic className="w-16 h-16 relative z-10" />
-                      </div>
-                    </button>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-full text-sm font-semibold">
-                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      Ready
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                  <h2 className="text-xl font-bold mb-4">Chat</h2>
-                  <div className="text-center">
-                    <p className="text-gray-400 text-sm mb-6">Ask questions or add expenses naturally</p>
-                    <button
-                      onClick={() => {
-                        setExpenseEntryMode('chat');
-                        setShowVoiceModal(true);
-                      }}
-                      className="w-full py-4 bg-gradient-to-r from-[#5b6ef6] to-[#8b5cf6] rounded-xl font-semibold hover:scale-105 transition flex items-center justify-center gap-3"
-                    >
-                      <MessageSquare className="w-6 h-6" />
-                      Open Chat
-                    </button>
-                  </div>
+                <div className="p-3 bg-[#252a45]/50 rounded-lg">
+                  <p className="text-xs text-gray-400 mb-1">Liabilities</p>
+                  <p className="text-lg font-bold text-red-400">${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Month's Breakdown */}
-            <div className="space-y-6">
-              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                <h2 className="text-xl font-bold mb-6">This Month's Breakdown</h2>
+            {/* AI Insights Card */}
+            <div className="bg-gradient-to-br from-[#1e2337]/80 to-[#252a45]/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-lg shadow-blue-500/10 relative overflow-hidden hover:scale-105 transition-transform duration-300">
+              <AIInsightCard 
+                selectedBusinesses={selectedBusinesses}
+                timeRange={timeRange}
+                compareMode={compareMode}
+              />
+            </div>
+          </div>
+          
+          {/* Live KPI Cards */}
+          <LiveKPICards 
+            selectedBusinesses={selectedBusinesses}
+            timeRange={timeRange}
+            compareMode={compareMode}
+          />
 
-                {/* Donut Chart */}
-                <div className="relative w-48 h-48 mx-auto mb-6">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
-                    <circle
-                      cx="100"
-                      cy="100"
-                      r="80"
-                      fill="none"
-                      stroke="#2d3248"
-                      strokeWidth="32"
-                    />
-                    {monthBreakdown.map((item, index) => {
-                      const prevPercentage = monthBreakdown
-                        .slice(0, index)
-                        .reduce((sum, i) => sum + i.percentage, 0);
-                      const circumference = 2 * Math.PI * 80;
-                      const offset = (prevPercentage / 100) * circumference;
-                      const dashArray = `${(item.percentage / 100) * circumference} ${circumference}`;
+          {/* Compact Charts Grid */}
+          <CompactCharts 
+            selectedBusinesses={selectedBusinesses}
+            timeRange={timeRange}
+            compareMode={compareMode}
+          />
 
-                      return (
-                        <circle
-                          key={item.category}
-                          cx="100"
-                          cy="100"
-                          r="80"
-                          fill="none"
-                          stroke={item.color}
-                          strokeWidth="32"
-                          strokeDasharray={dashArray}
-                          strokeDashoffset={-offset}
-                          className="transition-all duration-300"
-                        />
-                      );
-                    })}
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-3xl font-bold">${totalSpent.toLocaleString()}</p>
-                    <p className="text-sm text-gray-400">Total Spent</p>
-                  </div>
-                </div>
+          {/* Controls Row - Time Range and Business Filter above Heatmap */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="lg:col-span-2">
+              <SmartTimeSlider 
+                onTimeRangeChange={handleTimeRangeChange}
+                initialRange={timeRange}
+              />
+            </div>
+            <div>
+              <CrossBusinessFilter
+                onBusinessToggle={handleBusinessToggle}
+                onCompareModeToggle={setCompareMode}
+                selectedBusinesses={selectedBusinesses}
+                compareMode={compareMode}
+              />
+            </div>
+          </div>
 
-                {/* Category Legend */}
-                <div className="space-y-3">
-                  {monthBreakdown.map((item) => (
-                    <div key={item.category} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="text-sm text-gray-300">{item.category}</span>
-                      </div>
-                      <span className="text-sm font-bold">${item.amount.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Expenses - Right Column */}
-              <div className="bg-[#1a1d2e] p-6 rounded-2xl border border-white/5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold">Recent Expenses</h3>
-                  <button
-                    onClick={() => setActivePage('expenses')}
-                    className="text-sm text-blue-400 hover:text-blue-300 transition"
-                  >
-                    View All
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {recentExpenses.map((expense) => (
-                    <div key={expense.id} className="bg-[#252a41] p-4 rounded-xl hover:bg-[#2d3248] transition">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm mb-1">{expense.vendor}</p>
-                          <p className="text-xs text-gray-400">{expense.category}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-red-400">${expense.amount.toFixed(2)}</p>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            expense.status === 'approved'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-yellow-500/20 text-yellow-400'
-                          }`}>
-                            {expense.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{new Date(expense.date).toLocaleDateString()}</span>
-                        <span>{expense.paymentMethod}</span>
-                      </div>
-                      {expense.hasReceipt && (
-                        <div className="mt-2 pt-2 border-t border-white/5">
-                          <span className="text-xs text-blue-400 flex items-center gap-1">
-                            📎 Receipt attached
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+          {/* Bottom Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <HeatmapCalendar 
+                selectedBusinesses={selectedBusinesses}
+                timeRange={timeRange}
+                compareMode={compareMode}
+              />
+            </div>
+            <div>
+              <LivePLBadge 
+                selectedBusinesses={selectedBusinesses}
+                timeRange={timeRange}
+                compareMode={compareMode}
+              />
             </div>
           </div>
         </div>
@@ -690,6 +842,7 @@ export default function DashboardMock() {
         <ExpenseEntryHub
           businesses={businesses}
           initialMode={expenseEntryMode}
+          initialBusinessId={currentBusiness?.id}
           onClose={() => {
             setShowVoiceModal(false);
             setExpenseEntryMode('voice');
